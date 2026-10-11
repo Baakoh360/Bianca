@@ -1,7 +1,7 @@
 // The Beauty Journal: web server + admin API, backed by MongoDB.
 // Run:  node server.js      (reads settings from .env)
 import http from "node:http";
-import { readFile } from "node:fs/promises";
+import { readFile, stat } from "node:fs/promises";
 import { extname, join, normalize, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import crypto from "node:crypto";
@@ -127,11 +127,15 @@ const DEFAULT_SETTINGS = {
   videos: { home: "", hair: "", lash: "", nails: "" },
   videoFiles: { home: "", hair: "", lash: "", nails: "" },
   videoNames: { home: "", hair: "", lash: "", nails: "" },
+  videoTitles: { home: "", hair: "", lash: "", nails: "" },
+  clubPerks: [],
+  clubPosts: [],
+  qna: { title: "", when: "", link: "" },
   contactEmail: "",
 };
 async function getSettings() {
   const s = db ? await db.collection("settings").findOne({ _id: "site" }) : null;
-  return { ...DEFAULT_SETTINGS, ...(s || {}), announcement: { ...DEFAULT_SETTINGS.announcement, ...(s?.announcement || {}) }, videos: { ...DEFAULT_SETTINGS.videos, ...(s?.videos || {}) }, videoFiles: { ...DEFAULT_SETTINGS.videoFiles, ...(s?.videoFiles || {}) }, videoNames: { ...DEFAULT_SETTINGS.videoNames, ...(s?.videoNames || {}) } };
+  return { ...DEFAULT_SETTINGS, ...(s || {}), announcement: { ...DEFAULT_SETTINGS.announcement, ...(s?.announcement || {}) }, videos: { ...DEFAULT_SETTINGS.videos, ...(s?.videos || {}) }, videoFiles: { ...DEFAULT_SETTINGS.videoFiles, ...(s?.videoFiles || {}) }, videoNames: { ...DEFAULT_SETTINGS.videoNames, ...(s?.videoNames || {}) }, videoTitles: { ...DEFAULT_SETTINGS.videoTitles, ...(s?.videoTitles || {}) }, clubPerks: s?.clubPerks || [], clubPosts: s?.clubPosts || [], qna: { ...DEFAULT_SETTINGS.qna, ...(s?.qna || {}) } };
 }
 const ytId = (v) => { const m = String(v).match(/(?:v=|youtu\.be\/|embed\/|shorts\/)?([A-Za-z0-9_-]{11})(?:[?&].*)?$/); return m ? m[1] : ""; };
 
@@ -205,10 +209,20 @@ async function receiveVideo(req, res, slot, session) {
 async function publicApi(req, res, path) {
   if (path === "/api/settings" && req.method === "GET") {
     const s = await getSettings();
-    return json(res, 200, { announcement: s.announcement.enabled ? s.announcement : null, videos: s.videos, videoFiles: s.videoFiles });
+    return json(res, 200, { announcement: s.announcement.enabled ? s.announcement : null, videos: s.videos, videoFiles: s.videoFiles, videoTitles: s.videoTitles });
   }
   if (req.method !== "POST") return json(res, 405, { error: "method" });
   const ip = clientIp(req);
+  if (path === "/api/member") {
+    if (limited("m" + ip, 40, 600000)) return json(res, 429, { error: "Too many attempts, try again later." });
+    if (!db) return json(res, 503, { error: "Database unavailable" });
+    let d; try { d = await readBody(req); } catch { return json(res, 400, { error: "bad request" }); }
+    const email = clean(d.email, 254).toLowerCase();
+    const m = validEmail(email) ? await db.collection("subscribers").findOne({ email, status: { $ne: "unsubscribed" } }) : null;
+    if (!m) return json(res, 404, { member: false });
+    const st = await getSettings();
+    return json(res, 200, { member: true, name: m.name || "", perks: st.clubPerks, posts: st.clubPosts, qna: st.qna.title ? st.qna : null });
+  }
   let d;
   try { d = await readBody(req); } catch { return json(res, 400, { error: "bad request" }); }
 
@@ -353,7 +367,13 @@ async function adminApi(req, res, path, url) {
         if (raw && !ytId(raw)) return json(res, 400, { error: `"${raw}" is not a valid YouTube link or ID (${k}).` });
         videos[k] = raw ? ytId(raw) : "";
       }
-      const next = { announcement: { enabled: !!d.announcement?.enabled, text: clean(d.announcement?.text, 200), link }, videos, contactEmail: clean(d.contactEmail, 254) };
+      const videoTitles = {};
+      for (const k of Object.keys(DEFAULT_SETTINGS.videoTitles)) videoTitles[k] = clean(d.videoTitles?.[k], 100);
+      const safeLink = (v) => { const l = clean(v, 300); return /^(https?:\/\/|\/|[a-z0-9-]+\.html)/i.test(l) ? l : ""; };
+      const clubPerks = (Array.isArray(d.clubPerks) ? d.clubPerks : []).slice(0, 8).map((p) => ({ title: clean(p?.title, 80), text: clean(p?.text, 300), code: clean(p?.code, 40), link: safeLink(p?.link) })).filter((p) => p.title);
+      const clubPosts = (Array.isArray(d.clubPosts) ? d.clubPosts : []).slice(0, 6).map((p) => ({ title: clean(p?.title, 100), text: String(p?.text ?? "").replace(/[\u0000-\u0008\u000b-\u001f]/g, "").trim().slice(0, 1200) })).filter((p) => p.title && p.text);
+      const qna = { title: clean(d.qna?.title, 100), when: clean(d.qna?.when, 100), link: safeLink(d.qna?.link) };
+      const next = { clubPerks, clubPosts, qna, announcement: { enabled: !!d.announcement?.enabled, text: clean(d.announcement?.text, 200), link }, videos, videoTitles, contactEmail: clean(d.contactEmail, 254) };
       await db.collection("settings").updateOne({ _id: "site" }, { $set: next }, { upsert: true });
       await log("settings_updated", req, { by: session.email });
       return json(res, 200, { ok: true, settings: next });
@@ -389,7 +409,7 @@ async function adminApi(req, res, path, url) {
     return json(res, 200, { ok: true, count: r.modifiedCount });
   }
   if (path === "/api/admin/email/status") {
-    return json(res, 200, { configured: !!mailer, from: MAIL_FROM || SMTP_USER || "", newCount: await subs.countDocuments({ status: { $ne: "unsubscribed" }, welcomed: { $ne: true } }), publicUrl: PUBLIC_URL });
+    return json(res, 200, { configured: !!mailer, sender: (process.env.SENDER_EMAIL || ADMIN_EMAIL || "").toLowerCase(), from: MAIL_FROM || SMTP_USER || "", newCount: await subs.countDocuments({ status: { $ne: "unsubscribed" }, welcomed: { $ne: true } }), publicUrl: PUBLIC_URL });
   }
   if (path === "/api/admin/email" && req.method === "POST") {
     if (!mailer) return json(res, 400, { error: "Email sending isn't set up yet. Add the SMTP settings to .env (see README)." });
@@ -437,13 +457,17 @@ async function serveStatic(req, res, path) {
   if (path.endsWith("/")) path += "index.html";
   const file = normalize(join(ROOT, path));
   if (!file.startsWith(ROOT)) throw Object.assign(new Error(), { code: "ENOENT" });
+  const st = await stat(file);
+  const etag = `W/"${st.size.toString(16)}-${Math.floor(st.mtimeMs).toString(16)}"`;
+  if (req.headers["if-none-match"] === etag && !path.startsWith("/admin/")) { res.writeHead(304, { ETag: etag, "Cache-Control": "no-cache" }); return res.end(); }
   const data = await readFile(file);
   const ext = extname(file);
   const headers = { "Content-Type": TYPES[ext] || "application/octet-stream", "X-Content-Type-Options": "nosniff", "Referrer-Policy": "strict-origin-when-cross-origin" };
   if (path.startsWith("/admin/")) { headers["X-Frame-Options"] = "DENY"; headers["Cache-Control"] = "no-store"; headers["X-Robots-Tag"] = "noindex"; }
-  else if (/\.(jpg|png|webp|svg|css|js)$/.test(ext) || ext === ".jpg") headers["Cache-Control"] = "public, max-age=3600";
+  else if ([".html", ".css", ".js", ".xml", ".txt"].includes(ext)) { headers["Cache-Control"] = "no-cache"; headers.ETag = etag; } // always revalidate, so updates show immediately
+  else if (/\.(jpg|png|webp|svg|pdf)$/.test(ext)) { headers["Cache-Control"] = "public, max-age=3600"; headers.ETag = etag; }
   if (ext === ".pdf") {
-    headers["Content-Disposition"] = 'attachment; filename="Hair-Lash-Nail-Survival-Guide.pdf"';
+    headers["Content-Disposition"] = `attachment; filename="${path.split("/").pop()}"`;
     if (req.method === "GET") log("download", req, { file: path });
   }
   res.writeHead(200, headers);

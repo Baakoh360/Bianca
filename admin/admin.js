@@ -118,7 +118,7 @@ const BATCH = 40; // addresses per email, keeps links short enough for every ema
 
 // Opens the admin's own email app / Gmail with the message ready to send.
 // to = subscriber id (one person) | "new" | "all"   (bulk uses BCC so people can't see each other)
-async function composer({ title, to, sub, welcome, onDone }) {
+async function composer({ title, to, sub, welcome, onDone, sender }) {
   const bulk = to === "new" || to === "all";
   let people = sub ? [sub] : [];
   if (bulk) {
@@ -138,7 +138,7 @@ async function composer({ title, to, sub, welcome, onDone }) {
   const addrs = (list) => list.map((p) => p.email).join(",");
   const openLink = (url) => { const a = el("a", { href: url, target: "_blank", rel: "noopener" }); document.body.append(a); a.click(); a.remove(); };
   const mailtoUrl = (list) => bulk ? `mailto:?bcc=${encodeURIComponent(addrs(list))}&${q(list[0])}` : `mailto:${encodeURIComponent(list[0].email)}?${q(list[0])}`;
-  const gmailUrl = (list) => `https://mail.google.com/mail/?view=cm&fs=1&${bulk ? "bcc=" : "to="}${encodeURIComponent(addrs(list))}&${q(list[0])}`;
+  const gmailUrl = (list) => `https://mail.google.com/mail/?${sender ? "authuser=" + encodeURIComponent(sender) + "&" : ""}view=cm&fs=1&${bulk ? "bcc=" : "to="}${encodeURIComponent(addrs(list))}&${q(list[0])}`;
   const need = () => { if (!subject.value.trim() || !body.value.trim()) { msg.className = "msg err"; msg.textContent = "Please write a subject and a message first."; return false; } return true; };
 
   const markBtn = el("button", { class: "btn", type: "button", style: "display:none", onclick: async () => {
@@ -160,7 +160,8 @@ async function composer({ title, to, sub, welcome, onDone }) {
     el("h3", {}, title),
     el("p", { class: "hint" }, bulk ? "Everyone is added as a hidden copy (BCC), so nobody sees anyone else's email. Names can't be personalised in group emails. For {guide}, the Survival Guide link is filled in for you." : "Use {name} for their first name and {guide} for the Survival Guide link."),
     el("label", {}, "Subject"), subject, el("label", {}, "Message"), body,
-    el("p", { class: "hint", style: "margin-top:14px" }, "This opens your own email app (or Gmail in your browser) with everything filled in. You press Send from your own email."),
+    el("p", { class: "hint", style: "margin-top:14px" }, "This opens your email with everything filled in. You press Send there."),
+    sender ? el("p", { class: "sender-note" }, "Emails go out from ", el("strong", {}, sender), ". Use the \"Open in Gmail\" button while signed in to that Gmail account. (\"Open in my email app\" uses whichever account your computer's mail app is set up with.)") : null,
     rows, el("div", { class: "row", style: "margin-top:14px;flex-wrap:wrap" }, markBtn, el("button", { class: "btn ghost", type: "button", onclick: close }, "Close")), msg));
   document.body.append(overlay);
 }
@@ -169,8 +170,8 @@ async function subscribers(main) {
   const status = await api("/email/status");
   const reload = () => navigate("subscribers");
   const bar = el("div", { class: "row", style: "flex-wrap:wrap" },
-    el("button", { class: "btn", onclick: () => composer({ title: `Welcome ${status.newCount} new subscriber${status.newCount === 1 ? "" : "s"}`, to: "new", welcome: true, onDone: reload }) }, `Email new subscribers (${status.newCount})`),
-    el("button", { class: "btn ghost", onclick: () => composer({ title: "Email all subscribers", to: "all", onDone: reload }) }, "Email everyone"),
+    el("button", { class: "btn", onclick: () => composer({ title: `Welcome ${status.newCount} new subscriber${status.newCount === 1 ? "" : "s"}`, to: "new", welcome: true, onDone: reload, sender: status.sender }) }, `Email new subscribers (${status.newCount})`),
+    el("button", { class: "btn ghost", onclick: () => composer({ title: "Email all subscribers", to: "all", onDone: reload, sender: status.sender }) }, "Email everyone"),
     el("a", { class: "btn ghost", href: "/api/admin/subscribers/export" }, "Export CSV"));
   return pagedList(main, {
     endpoint: "/subscribers", search: true, headers: ["Joined", "Email", "Name", "Status", ""], extra: bar,
@@ -180,7 +181,7 @@ async function subscribers(main) {
       const set = (body) => async () => { await api("/subscribers/mark", { method: "POST", body: { ids: [sub._id], ...body } }); reload(); };
       return el("tr", { class: st === "NEW" ? "unread" : "" }, el("td", {}, fmt(sub.createdAt)), el("td", {}, sub.email), el("td", {}, sub.name), el("td", {}, st),
         el("td", {}, el("div", { class: "row" },
-          out ? null : el("button", { class: "btn small", onclick: () => composer({ title: "Email " + sub.email, to: sub._id, sub, welcome: !sub.welcomed, onDone: reload }) }, sub.welcomed ? "Email" : "Send welcome"),
+          out ? null : el("button", { class: "btn small", onclick: () => composer({ title: "Email " + sub.email, to: sub._id, sub, welcome: !sub.welcomed, onDone: reload, sender: status.sender }) }, sub.welcomed ? "Email" : "Send welcome"),
           el("button", { class: "btn ghost small", title: out ? "Allow emails again" : "They asked to stop getting emails", onclick: set({ status: out ? "active" : "unsubscribed" }) }, out ? "Re-add" : "Opt out"),
           el("button", { class: "btn danger small", onclick: async () => { if (confirm(`Remove ${sub.email}?`)) { await api("/subscribers/" + sub._id, { method: "DELETE" }); again(); } } }, "Delete"))));
     },
@@ -213,8 +214,9 @@ async function settingsView(main) {
   const on = el("input", { type: "checkbox", checked: s.announcement.enabled });
   const text = el("input", { type: "text", maxlength: 200, value: s.announcement.text, placeholder: "e.g. New guide: how to blend clip-ins!" });
   const link = el("input", { type: "text", value: s.announcement.link, placeholder: "Optional link, e.g. hair.html" });
-  const vids = {}; const vidLabels = { home: "Homepage masterclass", hair: "Hair hub + hair guides", lash: "Lash hub + lash guide", nails: "Nails hub" };
+  const vids = {}; const vidLabels = { home: "Homepage (Video Masterclass section)", hair: "Hair page + the hair guides", lash: "Lash page + the lash guides", nails: "Nails page + the nail guides" };
   for (const k of Object.keys(vidLabels)) vids[k] = el("input", { type: "text", value: s.videos[k], placeholder: "Or paste a YouTube link" });
+  const titles = {}; for (const k of Object.keys(vidLabels)) titles[k] = el("input", { type: "text", maxlength: 100, value: s.videoTitles?.[k] || "", placeholder: "e.g. How to apply clip-in extensions" });
   const uploadBox = (k) => {
     const state = el("p", { class: "hint", style: "margin:4px 0" }, s.videoFiles[k] ? "Uploaded video: " + (s.videoNames?.[k] || "video") : "No video uploaded");
     const file = el("input", { type: "file", accept: "video/mp4,video/webm" });
@@ -239,14 +241,18 @@ async function settingsView(main) {
     } }, "Upload video");
     const rm = el("button", { class: "btn danger small", type: "button", onclick: async () => { if (confirm("Remove the uploaded video?")) { await api("/video/" + k, { method: "DELETE" }); state.textContent = "No video uploaded"; prog.textContent = "Removed."; } } }, "Remove");
     return el("div", { style: "border:1px solid var(--line);border-radius:10px;padding:12px;margin-top:12px" }, el("strong", {}, vidLabels[k]), state,
-      el("div", { class: "row", style: "flex-wrap:wrap" }, file, up, rm, prog), el("label", {}, "YouTube alternative ", el("span", { class: "hint" }, "(used only if no video is uploaded)")), vids[k]);
+      el("div", { class: "row", style: "flex-wrap:wrap" }, file, up, rm, prog), el("label", {}, "YouTube link ", el("span", { class: "hint" }, "(used only if no video is uploaded; press Save changes at the bottom)")), vids[k], el("label", {}, "Title shown on the video ", el("span", { class: "hint" }, "(optional)")), titles[k]);
   };
+  // Insider Club content
+  const perkRows = [...Array(4)].map((_, i) => { const p = (s.clubPerks || [])[i] || {}; return { title: el("input", { type: "text", maxlength: 80, value: p.title || "", placeholder: "Offer title, e.g. 15% off at Brand X" }), text: el("input", { type: "text", maxlength: 300, value: p.text || "", placeholder: "Details" }), code: el("input", { type: "text", maxlength: 40, value: p.code || "", placeholder: "Discount code (optional)" }), link: el("input", { type: "text", value: p.link || "", placeholder: "Link (optional)" }) }; });
+  const postRows = [...Array(4)].map((_, i) => { const p = (s.clubPosts || [])[i] || {}; return { title: el("input", { type: "text", maxlength: 100, value: p.title || "", placeholder: "Post title, e.g. October tip: protect your lashes" }), text: el("textarea", { rows: 3, maxlength: 1200, placeholder: "Write your update or tip here..." }, p.text || "") }; });
+  const qna = { title: el("input", { type: "text", maxlength: 100, value: s.qna?.title || "", placeholder: "e.g. October live Q&A with a lash technician" }), when: el("input", { type: "text", maxlength: 100, value: s.qna?.when || "", placeholder: "e.g. Thursday 30 October, 7pm" }), link: el("input", { type: "text", value: s.qna?.link || "", placeholder: "Join link (Zoom / Instagram Live / YouTube)" }) };
   const msg = el("p", { class: "msg", role: "status" });
 
   main.append(el("form", { class: "card", style: "max-width:680px", onsubmit: async (e) => {
     e.preventDefault(); msg.className = "msg"; msg.textContent = "Saving…";
     try {
-      await api("/settings", { method: "PUT", body: { announcement: { enabled: on.checked, text: text.value, link: link.value }, videos: Object.fromEntries(Object.entries(vids).map(([k, i]) => [k, i.value])), contactEmail: s.contactEmail } });
+      await api("/settings", { method: "PUT", body: { announcement: { enabled: on.checked, text: text.value, link: link.value }, videos: Object.fromEntries(Object.entries(vids).map(([k, i]) => [k, i.value])), videoTitles: Object.fromEntries(Object.entries(titles).map(([k, i]) => [k, i.value])), clubPosts: postRows.map((r) => ({ title: r.title.value, text: r.text.value })), clubPerks: perkRows.map((r) => ({ title: r.title.value, text: r.text.value, code: r.code.value, link: r.link.value })), qna: { title: qna.title.value, when: qna.when.value, link: qna.link.value }, contactEmail: s.contactEmail } });
       msg.className = "msg ok"; msg.textContent = "Saved. Changes are live on the website.";
     } catch (err) { msg.className = "msg err"; msg.textContent = err.message; }
   } },
@@ -255,6 +261,15 @@ async function settingsView(main) {
     el("label", {}, "Message"), text, el("label", {}, "Link ", el("span", { class: "hint" }, "(optional)")), link,
     el("h3", { style: "margin-top:26px" }, "Video masterclasses"), el("p", { class: "hint" }, "Upload an MP4 or WebM file (max 100 MB; uploads go live immediately), or paste a YouTube link and press Save."),
     Object.keys(vidLabels).map(uploadBox),
+    el("h3", { style: "margin-top:26px" }, "Insider Club: posts from you"),
+    el("p", { class: "hint" }, "Tips and news for members. The newest post goes first (Post 1). Leave empty to show the default welcome tips."),
+    postRows.map((r, i) => el("div", { style: "border:1px solid var(--line);border-radius:10px;padding:12px;margin-top:10px" }, el("strong", {}, "Post " + (i + 1)), r.title, r.text)),
+    el("h3", { style: "margin-top:26px" }, "Insider Club: member perks"),
+    el("p", { class: "hint" }, "Shown only to people who have joined the club (on their Insider Club page). Add partner discounts here once you have them. Leave empty if you have none yet."),
+    perkRows.map((r, i) => el("div", { style: "border:1px solid var(--line);border-radius:10px;padding:12px;margin-top:10px" }, el("strong", {}, "Perk " + (i + 1)), r.title, r.text, el("div", { class: "row", style: "margin-top:8px" }, r.code, r.link))),
+    el("h3", { style: "margin-top:26px" }, "Insider Club: next live Q&A"),
+    el("p", { class: "hint" }, "Leave blank if there is no date yet. Members will be told you'll announce it by email."),
+    el("label", {}, "Title"), qna.title, el("label", {}, "Date and time"), qna.when, el("label", {}, "Join link"), qna.link,
     el("button", { class: "btn", type: "submit", style: "margin-top:20px" }, "Save changes"), msg));
 
   const pmsg = el("p", { class: "msg", role: "status" });

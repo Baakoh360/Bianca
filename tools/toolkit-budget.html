@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<title>Monthly Beauty Budget Planner</title>
+<style>
+@page { size: A4; margin: 0; }
+* { box-sizing: border-box; }
+:root { --ink:#2a1f2d; --muted:#6b5d6e; --plum:#5b2a4e; --dark:#3f1b36; --rose:#c9667a; --blush:#f3d9d4; --cream:#faf6f1; --line:#eadfd8; }
+body { margin: 0; font: 10.5pt/1.5 "Segoe UI", Helvetica, Arial, sans-serif; color: var(--ink); -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+.page { width: 210mm; height: 297mm; padding: 16mm 16mm 12mm; background: var(--cream); position: relative; overflow: hidden; }
+h1, h2 { font-family: Georgia, serif; margin: 0; }
+.brand { font: 700 12pt Georgia, serif; color: var(--dark); } .brand span { color: var(--rose); font-style: italic; }
+h1 { font-size: 26pt; color: var(--dark); margin: 4mm 0 1mm; } h1 em { color: var(--rose); }
+.sub { color: var(--muted); margin: 0 0 6mm; }
+table { width: 100%; border-collapse: collapse; background: #fff; border: 1px solid var(--line); }
+th { background: var(--plum); color: #fff; text-align: left; padding: 2.4mm 3mm; font-size: 9.5pt; }
+td { padding: 3.2mm 3mm; border-bottom: 1px solid var(--line); font-size: 9.5pt; vertical-align: middle; }
+td.fill { width: 24mm; border-left: 1px dotted var(--line); }
+tr.total td { background: var(--blush); font-weight: 700; }
+h2 { font-size: 13pt; color: var(--plum); margin: 7mm 0 2mm; }
+ol { margin: 0; padding-left: 5mm; } ol li { margin-bottom: 1.6mm; }
+.cols { display: grid; grid-template-columns: 1fr 1fr; gap: 6mm; }
+.box { background: #fff; border: 1px solid var(--line); border-radius: 3mm; padding: 4mm 5mm; }
+.note { background: var(--blush); border-radius: 3mm; padding: 3.5mm 4.5mm; margin-top: 6mm; font-size: 9.5pt; }
+.foot { position: absolute; left: 16mm; right: 16mm; bottom: 8mm; font-size: 8pt; color: var(--muted); border-top: 1px solid var(--line); padding-top: 2.5mm; display: flex; justify-content: space-between; }
+</style>
+</head>
+<body>
+<section class="page">
+  <div class="brand">The Beauty <span>Journal</span> · Insider Club toolkit</div>
+  <h1>Monthly beauty <em>budget planner</em></h1>
+  <p class="sub">Know the real total before you book. Fill in your own prices, or use our guide ranges on the right.</p>
+
+  <table>
+    <tr><th>What you have</th><th>Your price</th><th>How often</th><th>Times a month</th><th>Monthly cost</th><th>Guide range / month</th></tr>
+    <tr><td>Clip-in extensions (one-off ÷ months of use)</td><td class="fill"></td><td class="fill"></td><td class="fill"></td><td class="fill"></td><td>£7–£40</td></tr>
+    <tr><td>Tape-in or weft reapplication</td><td class="fill"></td><td class="fill"></td><td class="fill"></td><td class="fill"></td><td>£55–£135</td></tr>
+    <tr><td>Lash infills</td><td class="fill"></td><td class="fill"></td><td class="fill"></td><td class="fill"></td><td>£45–£130</td></tr>
+    <tr><td>Gel / builder manicure</td><td class="fill"></td><td class="fill"></td><td class="fill"></td><td class="fill"></td><td>£35–£100</td></tr>
+    <tr><td>Aftercare products</td><td class="fill"></td><td class="fill"></td><td class="fill"></td><td class="fill"></td><td>£15–£40</td></tr>
+    <tr><td>Removal / repairs</td><td class="fill"></td><td class="fill"></td><td class="fill"></td><td class="fill"></td><td>£0–£30</td></tr>
+    <tr class="total"><td colspan="4">Total per month</td><td class="fill"></td><td></td></tr>
+    <tr class="total"><td colspan="4">Total per year (× 12)</td><td class="fill"></td><td></td></tr>
+  </table>
+
+  <div class="cols">
+    <div>
+      <h2>How to work it out</h2>
+      <ol>
+        <li>Write down what each service costs, including tip and travel.</li>
+        <li>For one-off buys (like clip-ins), divide the price by the months you expect to use them.</li>
+        <li>Multiply price × times per month. A fill every 3 weeks is about 1.4 times a month.</li>
+        <li>Add it all up, then multiply by 12 for the yearly cost.</li>
+      </ol>
+    </div>
+    <div class="box">
+      <h2 style="margin-top:0">My monthly limit</h2>
+      <p style="margin:0 0 3mm">£ ________________</p>
+      <h2>Where I can save</h2>
+      <p style="margin:0">__________________________<br><br>__________________________</p>
+    </div>
+  </div>
+
+  <div class="note"><strong>Tip:</strong> good aftercare means fewer repairs and longer between appointments. Ask what is included in a price (removal, infills, deposits) before you book. Guide ranges are indicative UK prices and vary by area and technician.</div>
+  <div class="foot"><span>© The Beauty Journal. Website by Ofori Digital Media.</span><span>Insider Club toolkit</span></div>
+</section>
+</body>
+</html>

@@ -8,6 +8,7 @@ import { EXTRA_GUIDES } from "./guides-extra.mjs";
 const OUT = dirname(fileURLToPath(import.meta.url));
 
 // ---- CONFIG: change these before launch ----------------------------------
+const BUILD_ID = Date.now().toString(36); // appended to css/js links so browsers always fetch the new files
 const SITE = {
   name: "The Beauty Journal",
   url: "https://www.example.com", // ← your real domain (used for canonical URLs + sitemap)
@@ -66,8 +67,8 @@ ${noindex ? '<meta name="robots" content="noindex">' : `<link rel="canonical" hr
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,600;0,700;1,600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="${root}styles.css">
-<link rel="stylesheet" href="${root}motion.css">
+<link rel="stylesheet" href="${root}styles.css?v=${BUILD_ID}">
+<link rel="stylesheet" href="${root}motion.css?v=${BUILD_ID}">
 ${ld}
 </head>
 <body>
@@ -76,7 +77,7 @@ ${ld}
   <div class="wrap nav">
     <a class="logo" href="${root}index.html" aria-label="The Beauty Journal, home"><span class="logo-mark">B</span><span class="logo-text">The Beauty <em>Journal</em></span></a>
     <button class="menu-toggle" aria-label="Menu" aria-expanded="false">☰</button>
-    <ul>${nav}<li><a class="btn" href="${root}index.html#club">Join the Club</a></li></ul>
+    <ul>${nav}<li><a class="btn" href="${root}club.html">Insider Club</a></li></ul>
   </div>
 </header>
 <main id="main">
@@ -87,14 +88,14 @@ ${body.replaceAll("@ROOT@", root)}
     <div class="footer-grid">
       <div><h4>The Beauty Journal</h4><p>Honest hair, lash &amp; nail education for women 18–35. No sponsored fluff.</p></div>
       <div><h4>Explore</h4><a href="${root}hair.html">Hair Extensions</a><a href="${root}lash.html">Lash Care</a><a href="${root}nails.html">Nail Maintenance</a><a href="${root}guides/what-beauty-upkeep-really-costs.html">Cost Breakdown</a></div>
-      <div><h4>The Journal</h4><a href="${root}about.html">About</a><a href="${root}contact.html">Contact</a><a href="${root}index.html#club">Insider Club</a><a href="${root}privacy.html">Privacy</a></div>
+      <div><h4>The Journal</h4><a href="${root}about.html">About</a><a href="${root}contact.html">Contact</a><a href="${root}club.html">Insider Club</a><a href="${root}privacy.html">Privacy</a></div>
     </div>
     <p class="copy">© <span class="year">2026</span> ${SITE.name}. Website by Ofori Digital Media. Content is educational and not medical advice.</p>
   </div>
 </footer>
 ${optinExtras()}
-<script src="${root}script.js"></script>
-<script src="${root}motion.js" defer></script>
+<script src="${root}script.js?v=${BUILD_ID}"></script>
+<script src="${root}motion.js?v=${BUILD_ID}" defer></script>
 </body>
 </html>
 `;
@@ -642,6 +643,104 @@ function notFoundPage() {
   return layout({ title: "Page not found", desc: "Page not found.", path: "404.html", body, noindex: true });
 }
 
+
+function clubLibrary() {
+  const cols = [["hair", "Hair extensions"], ["lash", "Lash care"], ["nails", "Nail care"], ["home", "Money"]];
+  return cols.map(([h, label]) => `<div class="lib-col"><h3>${label}</h3>${GUIDES.filter((g) => g.hub === h).map((g) => `<a href="guides/${g.slug}.html">${g.title}</a>`).join("")}</div>`).join("");
+}
+
+function clubPage() {
+  const toolkit = (file, title, text) => `<a class="toolkit" href="downloads/${file}" download><span class="tk-icon">⬇</span><span><strong>${title}</strong><small>${text}</small></span></a>`;
+  const body = `<section class="page-hero"><div class="wrap"><p class="eyebrow">The Beauty Insider Club</p><h1 id="club-title">Your <em>Insider Club</em> corner</h1><p class="lede" id="club-lede">Free toolkits, partner perks and live Q&amp;As for people who care about their hair, lashes and nails.</p></div></section>
+<section class="section" id="club-app">
+  <div class="wrap">
+    <div id="club-loading" class="hint-box">Loading your club…</div>
+
+    <div id="club-guest" hidden>
+      <div class="two-col">
+        <div class="box">
+          <h2>Join the club, it's free</h2>
+          <ul class="checks"><li>The free Hair, Lash &amp; Nail Survival Guide</li><li>Printable weekly checklist and monthly budget planner</li><li>Partner discount codes, when they are live</li><li>Live Q&amp;A announcements</li></ul>
+        </div>
+        <form class="optin box" data-subscribe novalidate>
+          <h3>Join the Insider Club</h3>
+          <label for="n-cg">First name</label><input id="n-cg" name="name" type="text" autocomplete="given-name">
+          <label for="e-cg">Email</label><input id="e-cg" type="email" required autocomplete="email">
+          <button class="btn" type="submit">Join and get my guide</button>
+          <p class="form-msg" role="status"></p>
+        </form>
+      </div>
+      <form class="box member-check" id="member-check" novalidate>
+        <h3>Already a member?</h3>
+        <p class="fine">Enter the email you joined with to open your club page on this device.</p>
+        <div class="row-form"><input id="e-mc" type="email" required autocomplete="email" placeholder="you@example.com" aria-label="Email"><button class="btn" type="submit">Open my club</button></div>
+        <p class="form-msg" role="status"></p>
+      </form>
+    </div>
+
+    <div id="club-member" hidden>
+      <div id="club-joined" class="joined-banner" hidden>You're in! Welcome to the club.</div>
+      <div class="card-m posts-card">
+        <p class="eyebrow">From the club</p>
+        <h2>News and tips</h2>
+        <div id="club-posts"></div>
+      </div>
+      <div class="member-grid">
+        <div class="card-m main-card">
+          <p class="eyebrow">Step 1</p>
+          <h2>Your free Survival Guide</h2>
+          <p>Care routines, real monthly costs and red flags in one printable 8-page guide.</p>
+          <a class="btn" href="downloads/Hair-Lash-Nail-Survival-Guide.pdf" download>Download the guide (PDF)</a>
+        </div>
+        <div class="card-m">
+          <p class="eyebrow">Step 2</p>
+          <h2>Printable toolkits</h2>
+          ${toolkit("Weekly-Care-Checklist.pdf", "Weekly care checklist", "Hair, lashes and nails on one page")}
+          ${toolkit("Monthly-Beauty-Budget-Planner.pdf", "Monthly budget planner", "Work out your real monthly cost")}
+        </div>
+        <div class="card-m">
+          <p class="eyebrow">Step 3</p>
+          <h2>Member perks</h2>
+          <div id="club-perks"></div>
+        </div>
+        <div class="card-m">
+          <p class="eyebrow">Step 4</p>
+          <h2>Live Q&amp;A</h2>
+          <div id="club-qna"></div>
+        </div>
+      </div>
+      <div class="card-m tracker" id="tracker">
+        <p class="eyebrow">Your week</p>
+        <h2>Weekly routine tracker</h2>
+        <p class="muted">Tick off your habits. It saves on this device and starts fresh every Monday.</p>
+        <div class="progress-wrap"><div class="progress-bar"><span id="tracker-fill"></span></div><strong id="tracker-count">0 of 6 done</strong></div>
+        <ul class="tracker-list" id="tracker-list"></ul>
+      </div>
+      <div class="card-m">
+        <p class="eyebrow">Club library</p>
+        <h2>All our guides, one place</h2>
+        <div class="library">${clubLibrary()}</div>
+      </div>
+      <form class="card-m ask-form" id="ask-form" novalidate>
+        <p class="eyebrow">Ask the club</p>
+        <h2>Got a question?</h2>
+        <p class="muted">Ask about hair, lashes or nails. We read every question and turn the best ones into guides and Q&amp;A topics.</p>
+        <textarea id="ask-q" rows="4" maxlength="1500" placeholder="Type your question here..." required></textarea>
+        <button class="btn" type="submit">Send my question</button>
+        <p class="form-msg" role="status"></p>
+      </form>
+      <div class="box next-box">
+        <h3>What happens next</h3>
+        <ul class="checks"><li>New guides and masterclasses are added to the site regularly. Browse the <a href="hair.html">hair</a>, <a href="lash.html">lash</a> and <a href="nails.html">nails</a> hubs.</li><li>We'll tell you by email when a new perk or live Q&amp;A is announced.</li><li>Want a topic covered? <a href="contact.html">Tell us</a> and we may turn it into a guide.</li></ul>
+        <p class="fine"><a href="#" id="club-leave">Not you? Use a different email on this device</a></p>
+      </div>
+    </div>
+    <noscript><p>The club page needs JavaScript. You can still <a href="downloads/Hair-Lash-Nail-Survival-Guide.pdf">download the Survival Guide</a>.</p></noscript>
+  </div>
+</section>`;
+  return layout({ title: "Insider Club", desc: "The Beauty Insider Club: free toolkits, partner perks and live Q&As for hair, lash and nail care.", path: "club.html", body });
+}
+
 /* ---------- Write everything ---------- */
 const files = {
   "index.html": homePage(),
@@ -649,6 +748,7 @@ const files = {
   "lash.html": hubPage("lash"),
   "nails.html": hubPage("nails"),
   "about.html": aboutPage(),
+  "club.html": clubPage(),
   "contact.html": contactPage(),
   "privacy.html": privacyPage(),
   "404.html": notFoundPage(),

@@ -1,0 +1,159 @@
+<!doctype html>
+<html lang="en-GB" class="no-js">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Insider Club | The Beauty Journal</title>
+<meta name="description" content="The Beauty Insider Club: free toolkits, partner perks and live Q&As for hair, lash and nail care.">
+<meta name="theme-color" content="#5b2a4e">
+<link rel="canonical" href="https://www.example.com/club.html">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="The Beauty Journal">
+<meta property="og:title" content="Insider Club | The Beauty Journal">
+<meta property="og:description" content="The Beauty Insider Club: free toolkits, partner perks and live Q&As for hair, lash and nail care.">
+<meta property="og:url" content="https://www.example.com/club.html">
+<meta name="twitter:card" content="summary">
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,600;0,700;1,600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles.css?v=mv47o1qn">
+<link rel="stylesheet" href="motion.css?v=mv47o1qn">
+
+</head>
+<body>
+<a class="skip" href="#main">Skip to content</a>
+<header class="site-header">
+  <div class="wrap nav">
+    <a class="logo" href="index.html" aria-label="The Beauty Journal, home"><span class="logo-mark">B</span><span class="logo-text">The Beauty <em>Journal</em></span></a>
+    <button class="menu-toggle" aria-label="Menu" aria-expanded="false">☰</button>
+    <ul><li><a href="index.html">Home</a></li><li><a href="hair.html">Hair Extensions</a></li><li><a href="lash.html">Lash Care</a></li><li><a href="nails.html">Nail Maintenance</a></li><li><a href="about.html">About</a></li><li><a class="btn" href="club.html">Insider Club</a></li></ul>
+  </div>
+</header>
+<main id="main">
+<section class="page-hero"><div class="wrap"><p class="eyebrow">The Beauty Insider Club</p><h1 id="club-title">Your <em>Insider Club</em> corner</h1><p class="lede" id="club-lede">Free toolkits, partner perks and live Q&amp;As for people who care about their hair, lashes and nails.</p></div></section>
+<section class="section" id="club-app">
+  <div class="wrap">
+    <div id="club-loading" class="hint-box">Loading your club…</div>
+
+    <div id="club-guest" hidden>
+      <div class="two-col">
+        <div class="box">
+          <h2>Join the club, it's free</h2>
+          <ul class="checks"><li>The free Hair, Lash &amp; Nail Survival Guide</li><li>Printable weekly checklist and monthly budget planner</li><li>Partner discount codes, when they are live</li><li>Live Q&amp;A announcements</li></ul>
+        </div>
+        <form class="optin box" data-subscribe novalidate>
+          <h3>Join the Insider Club</h3>
+          <label for="n-cg">First name</label><input id="n-cg" name="name" type="text" autocomplete="given-name">
+          <label for="e-cg">Email</label><input id="e-cg" type="email" required autocomplete="email">
+          <button class="btn" type="submit">Join and get my guide</button>
+          <p class="form-msg" role="status"></p>
+        </form>
+      </div>
+      <form class="box member-check" id="member-check" novalidate>
+        <h3>Already a member?</h3>
+        <p class="fine">Enter the email you joined with to open your club page on this device.</p>
+        <div class="row-form"><input id="e-mc" type="email" required autocomplete="email" placeholder="you@example.com" aria-label="Email"><button class="btn" type="submit">Open my club</button></div>
+        <p class="form-msg" role="status"></p>
+      </form>
+    </div>
+
+    <div id="club-member" hidden>
+      <div id="club-joined" class="joined-banner" hidden>You're in! Welcome to the club.</div>
+      <div class="card-m posts-card">
+        <p class="eyebrow">From the club</p>
+        <h2>News and tips</h2>
+        <div id="club-posts"></div>
+      </div>
+      <div class="member-grid">
+        <div class="card-m main-card">
+          <p class="eyebrow">Step 1</p>
+          <h2>Your free Survival Guide</h2>
+          <p>Care routines, real monthly costs and red flags in one printable 8-page guide.</p>
+          <a class="btn" href="downloads/Hair-Lash-Nail-Survival-Guide.pdf" download>Download the guide (PDF)</a>
+        </div>
+        <div class="card-m">
+          <p class="eyebrow">Step 2</p>
+          <h2>Printable toolkits</h2>
+          <a class="toolkit" href="downloads/Weekly-Care-Checklist.pdf" download><span class="tk-icon">⬇</span><span><strong>Weekly care checklist</strong><small>Hair, lashes and nails on one page</small></span></a>
+          <a class="toolkit" href="downloads/Monthly-Beauty-Budget-Planner.pdf" download><span class="tk-icon">⬇</span><span><strong>Monthly budget planner</strong><small>Work out your real monthly cost</small></span></a>
+        </div>
+        <div class="card-m">
+          <p class="eyebrow">Step 3</p>
+          <h2>Member perks</h2>
+          <div id="club-perks"></div>
+        </div>
+        <div class="card-m">
+          <p class="eyebrow">Step 4</p>
+          <h2>Live Q&amp;A</h2>
+          <div id="club-qna"></div>
+        </div>
+      </div>
+      <div class="card-m tracker" id="tracker">
+        <p class="eyebrow">Your week</p>
+        <h2>Weekly routine tracker</h2>
+        <p class="muted">Tick off your habits. It saves on this device and starts fresh every Monday.</p>
+        <div class="progress-wrap"><div class="progress-bar"><span id="tracker-fill"></span></div><strong id="tracker-count">0 of 6 done</strong></div>
+        <ul class="tracker-list" id="tracker-list"></ul>
+      </div>
+      <div class="card-m">
+        <p class="eyebrow">Club library</p>
+        <h2>All our guides, one place</h2>
+        <div class="library"><div class="lib-col"><h3>Hair extensions</h3><a href="guides/how-to-blend-clip-in-extensions-with-short-hair.html">How to Blend Clip-In Extensions With Short Hair</a><a href="guides/how-to-wash-and-dry-hair-extensions.html">How to Wash and Dry Hair Extensions</a><a href="guides/how-to-prevent-extension-tension-and-hair-breakage.html">How to Prevent Tension and Breakage From Hair Extensions</a><a href="guides/tape-in-vs-clip-in-vs-weft-hair-extensions.html">Tape-In vs Clip-In vs Weft Hair Extensions</a></div><div class="lib-col"><h3>Lash care</h3><a href="guides/how-to-care-for-lash-extensions-and-gel-nails.html">How to Care for Lash Extensions and Gel Nails</a><a href="guides/lash-extension-products-to-avoid.html">Lash Extension Products to Avoid (and What to Use Instead)</a><a href="guides/classic-vs-hybrid-vs-volume-lash-extensions.html">Classic vs Hybrid vs Volume Lash Extensions</a><a href="guides/when-to-fill-lash-extensions-and-when-to-rest.html">When to Fill Lash Extensions (and When to Give Your Lashes a Rest)</a></div><div class="lib-col"><h3>Nail care</h3><a href="guides/gel-nail-aftercare-how-to-stop-lifting.html">Gel Nail Aftercare: How to Stop Lifting and Chipping</a><a href="guides/how-to-remove-gel-nails-at-home-safely.html">How to Remove Gel Nails at Home Safely</a><a href="guides/how-to-rebuild-weak-nails-between-gel-sets.html">How to Rebuild Weak Nails Between Gel Sets</a><a href="guides/gel-vs-builder-gel-vs-press-on-nails.html">Gel vs Builder Gel vs Press-On Nails</a></div><div class="lib-col"><h3>Money</h3><a href="guides/what-beauty-upkeep-really-costs.html">What Beauty Upkeep Really Costs Per Month</a></div></div>
+      </div>
+      <form class="card-m ask-form" id="ask-form" novalidate>
+        <p class="eyebrow">Ask the club</p>
+        <h2>Got a question?</h2>
+        <p class="muted">Ask about hair, lashes or nails. We read every question and turn the best ones into guides and Q&amp;A topics.</p>
+        <textarea id="ask-q" rows="4" maxlength="1500" placeholder="Type your question here..." required></textarea>
+        <button class="btn" type="submit">Send my question</button>
+        <p class="form-msg" role="status"></p>
+      </form>
+      <div class="box next-box">
+        <h3>What happens next</h3>
+        <ul class="checks"><li>New guides and masterclasses are added to the site regularly. Browse the <a href="hair.html">hair</a>, <a href="lash.html">lash</a> and <a href="nails.html">nails</a> hubs.</li><li>We'll tell you by email when a new perk or live Q&amp;A is announced.</li><li>Want a topic covered? <a href="contact.html">Tell us</a> and we may turn it into a guide.</li></ul>
+        <p class="fine"><a href="#" id="club-leave">Not you? Use a different email on this device</a></p>
+      </div>
+    </div>
+    <noscript><p>The club page needs JavaScript. You can still <a href="downloads/Hair-Lash-Nail-Survival-Guide.pdf">download the Survival Guide</a>.</p></noscript>
+  </div>
+</section>
+</main>
+<footer class="site-footer">
+  <div class="wrap">
+    <div class="footer-grid">
+      <div><h4>The Beauty Journal</h4><p>Honest hair, lash &amp; nail education for women 18–35. No sponsored fluff.</p></div>
+      <div><h4>Explore</h4><a href="hair.html">Hair Extensions</a><a href="lash.html">Lash Care</a><a href="nails.html">Nail Maintenance</a><a href="guides/what-beauty-upkeep-really-costs.html">Cost Breakdown</a></div>
+      <div><h4>The Journal</h4><a href="about.html">About</a><a href="contact.html">Contact</a><a href="club.html">Insider Club</a><a href="privacy.html">Privacy</a></div>
+    </div>
+    <p class="copy">© <span class="year">2026</span> The Beauty Journal. Website by Ofori Digital Media. Content is educational and not medical advice.</p>
+  </div>
+</footer>
+<div class="sticky-bar" role="region" aria-label="Subscribe">
+  <div class="wrap sticky-inner">
+    <p><strong>Free Survival Guide:</strong> hair, lash &amp; nail care in one PDF.</p>
+    <form data-subscribe novalidate>
+      <input type="email" placeholder="Your email" aria-label="Email address" required>
+      <button class="btn" type="submit">Get it</button>
+    </form>
+    <button class="sticky-close" aria-label="Dismiss">×</button>
+    <p class="sticky-msg" role="status"></p>
+  </div>
+</div>
+<div class="modal" role="dialog" aria-modal="true" aria-label="Before you go">
+  <div class="modal-card">
+    <button class="modal-x" aria-label="Close">×</button>
+    <form class="optin" data-subscribe novalidate>
+      <h3>Before you go…</h3>
+      <p>Grab the free Hair, Lash &amp; Nail Survival Guide.</p>
+      <label for="e-modal">Email</label>
+      <input id="e-modal" type="email" required autocomplete="email">
+      <button class="btn" type="submit">Send me the guide</button>
+      <p class="form-msg" role="status"></p>
+    </form>
+  </div>
+</div>
+<script src="script.js?v=mv47o1qn"></script>
+<script src="motion.js?v=mv47o1qn" defer></script>
+</body>
+</html>

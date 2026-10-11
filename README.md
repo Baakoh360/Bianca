@@ -29,3 +29,9 @@ click "I've sent it: mark as welcomed" so they stop showing as NEW. Use "Opt out
 ## Video uploads
 Admin > Site settings > Video masterclasses: upload MP4 or WebM (max 100 MB each). Videos are stored in
 MongoDB, so they survive redeploys. Mind your Atlas storage limit (free tier: 512 MB total).
+
+## Insider Club (members page)
+After joining, people land on /club.html: their Survival Guide, two printable toolkits (downloads/), member perks and the next live Q&A.
+Perks and Q&A are set in Admin > Site settings (leave blank until you have them; members then see an honest "coming soon").
+Members are recognised by the email they joined with (stored in their browser); "Already a member?" lets them reopen it on another device.
+Toolkit sources: tools/toolkit-*.html (re-export to PDF like the Survival Guide).
