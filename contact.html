@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="en-GB" class="no-js">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Contact | The Beauty Journal</title>
+<meta name="description" content="Contact The Beauty Journal with questions, topic requests or partnership enquiries.">
+<meta name="theme-color" content="#5b2a4e">
+<link rel="canonical" href="https://www.example.com/contact.html">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="The Beauty Journal">
+<meta property="og:title" content="Contact | The Beauty Journal">
+<meta property="og:description" content="Contact The Beauty Journal with questions, topic requests or partnership enquiries.">
+<meta property="og:url" content="https://www.example.com/contact.html">
+<meta name="twitter:card" content="summary">
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,600;0,700;1,600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles.css">
+<link rel="stylesheet" href="motion.css">
+
+</head>
+<body>
+<a class="skip" href="#main">Skip to content</a>
+<header class="site-header">
+  <div class="wrap nav">
+    <a class="logo" href="index.html" aria-label="The Beauty Journal, home"><span class="logo-mark">B</span><span class="logo-text">The Beauty <em>Journal</em></span></a>
+    <button class="menu-toggle" aria-label="Menu" aria-expanded="false">☰</button>
+    <ul><li><a href="index.html">Home</a></li><li><a href="hair.html">Hair Extensions</a></li><li><a href="lash.html">Lash Care</a></li><li><a href="nails.html">Nail Maintenance</a></li><li><a href="about.html">About</a></li><li><a class="btn" href="index.html#club">Join the Club</a></li></ul>
+  </div>
+</header>
+<main id="main">
+<section class="page-hero"><div class="wrap"><p class="eyebrow">Contact</p><h1>Say <em>hello.</em></h1><p class="lede">Questions, topic requests or partnership enquiries — we read everything.</p></div></section>
+<section class="section"><div class="wrap two-col">
+<form class="optin box" data-contact novalidate>
+  <h3>Send us a message</h3>
+  <label for="c-name">Name</label><input id="c-name" name="name" type="text" autocomplete="name">
+  <label for="c-email">Email</label><input id="c-email" type="email" required autocomplete="email">
+  <label for="c-msg">Message</label><textarea id="c-msg" name="message" rows="6" required></textarea>
+  <button class="btn" type="submit">Send message</button>
+  <p class="form-msg" role="status"></p>
+</form>
+<div class="prose"><h2>Other ways</h2>
+<p>Email us at <a href="mailto:hello@example.com">hello@example.com</a>.</p>
+<p>Want a topic covered? Tell us what you're struggling with and we may turn it into a guide and video masterclass.</p>
+<p>Brand and partnership enquiries are welcome, but we only feature products we'd recommend, and we always disclose partners.</p></div>
+</div></section>
+</main>
+<footer class="site-footer">
+  <div class="wrap">
+    <div class="footer-grid">
+      <div><h4>The Beauty Journal</h4><p>Honest hair, lash &amp; nail education for women 18–35. No sponsored fluff.</p></div>
+      <div><h4>Explore</h4><a href="hair.html">Hair Extensions</a><a href="lash.html">Lash Care</a><a href="nails.html">Nail Maintenance</a><a href="guides/what-beauty-upkeep-really-costs.html">Cost Breakdown</a></div>
+      <div><h4>The Journal</h4><a href="about.html">About</a><a href="contact.html">Contact</a><a href="index.html#club">Insider Club</a><a href="privacy.html">Privacy</a></div>
+    </div>
+    <p class="copy">© <span class="year">2026</span> The Beauty Journal. Website by Ofori Digital Media. Content is educational and not medical advice.</p>
+  </div>
+</footer>
+<div class="sticky-bar" role="region" aria-label="Subscribe">
+  <div class="wrap sticky-inner">
+    <p><strong>Free Survival Guide:</strong> hair, lash &amp; nail care in one PDF.</p>
+    <form data-subscribe novalidate>
+      <input type="email" placeholder="Your email" aria-label="Email address" required>
+      <button class="btn" type="submit">Get it</button>
+    </form>
+    <button class="sticky-close" aria-label="Dismiss">×</button>
+    <p class="sticky-msg" role="status"></p>
+  </div>
+</div>
+<div class="modal" role="dialog" aria-modal="true" aria-label="Before you go">
+  <div class="modal-card">
+    <button class="modal-x" aria-label="Close">×</button>
+    <form class="optin" data-subscribe novalidate>
+      <h3>Before you go…</h3>
+      <p>Grab the free Hair, Lash &amp; Nail Survival Guide.</p>
+      <label for="e-modal">Email</label>
+      <input id="e-modal" type="email" required autocomplete="email">
+      <button class="btn" type="submit">Send me the guide</button>
+      <p class="form-msg" role="status"></p>
+    </form>
+  </div>
+</div>
+<script src="script.js"></script>
+<script src="motion.js" defer></script>
+</body>
+</html>

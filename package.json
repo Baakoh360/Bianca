@@ -1,0 +1,17 @@
+{
+  "name": "the-beauty-journal",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "node build.mjs",
+    "start": "node server.js"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "mongodb": "^7.7.0",
+    "nodemailer": "^10.1.0"
+  }
+}

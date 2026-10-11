@@ -1,0 +1,31 @@
+# The Beauty Journal
+
+## Run
+    npm install
+    node server.js      # http://localhost:3000   admin: http://localhost:3000/admin/
+
+Settings live in `.env` (never commit or share it): `MONGODB_URI`, `ADMIN_EMAIL`,
+`ADMIN_PASSWORD` (initial admin password, change it in Admin > Site settings), `SESSION_SECRET`.
+
+## Admin panel (/admin/)
+Dashboard (sign-ups, page views, downloads), subscribers (search, delete, CSV export),
+contact messages (read/unread/delete), activity log, announcement bar, YouTube video links, password change.
+
+## Content
+Edit `build.mjs`, then `node build.mjs`. Survival Guide source: `tools/survival-guide.html`.
+
+## Deploy (needs a Node host: Render, Railway, Fly.io, VPS)
+Set the same env vars on the host plus `NODE_ENV=production` and `TRUST_PROXY=1`.
+In MongoDB Atlas > Network Access, allow the host's IP (or 0.0.0.0/0).
+Before launch set `SITE.url` and `SITE.email` in `build.mjs` and rebuild.
+
+## Emailing subscribers (from your own email)
+The website never sends email itself. In Admin > Subscribers, new sign-ups are marked NEW. Click "Send welcome" (one person),
+"Email new subscribers" or "Email everyone": this opens YOUR email app (or Gmail in the browser) with the message ready.
+Group emails use BCC (nobody sees other addresses) and are split into batches of 40. Press Send in your email app, then
+click "I've sent it: mark as welcomed" so they stop showing as NEW. Use "Opt out" when someone replies "unsubscribe".
+(The optional SMTP_* settings in .env are not needed; leave them empty.)
+
+## Video uploads
+Admin > Site settings > Video masterclasses: upload MP4 or WebM (max 100 MB each). Videos are stored in
+MongoDB, so they survive redeploys. Mind your Atlas storage limit (free tier: 512 MB total).
