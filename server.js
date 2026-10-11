@@ -298,7 +298,7 @@ async function adminApi(req, res, path, url) {
       logs.countDocuments({ type: "pageview", createdAt: { $gte: new Date(Date.now() - 7 * 86400000) } }),
       logs.aggregate([{ $match: { type: "pageview", createdAt: { $gte: since } } }, { $group: { _id: day, n: { $sum: 1 } } }]).toArray(),
       subs.aggregate([{ $match: { createdAt: { $gte: since } } }, { $group: { _id: day, n: { $sum: 1 } } }]).toArray(),
-      logs.aggregate([{ $match: { type: "pageview", createdAt: { $gte: since } } }, { $group: { _id: "$detail.path", n: { $sum: 1 } } }, { $sort: { n: -1 } }, { $limit: 8 }]).toArray(),
+      logs.aggregate([{ $match: { type: "pageview", createdAt: { $gte: since } } }, { $group: { _id: "$detail.path", n: { $sum: 1 } } }, { $sort: { n: -1 } }, { $limit: 40 }]).toArray(),
       subs.aggregate([{ $group: { _id: "$source", n: { $sum: 1 } } }, { $sort: { n: -1 } }, { $limit: 6 }]).toArray(),
     ]);
     const downloads = await logs.countDocuments({ type: "download" });

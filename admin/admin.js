@@ -76,6 +76,24 @@ async function navigate(view) {
 }
 
 /* ---------- Dashboard ---------- */
+const PAGE_NAMES = { "/": "Home page", "/index.html": "Home page", "/hair.html": "Hair page", "/lash.html": "Lash page", "/nails.html": "Nails page", "/about.html": "About page", "/contact.html": "Contact page", "/club.html": "Insider Club page", "/privacy.html": "Privacy page", "/404.html": "Page not found" };
+function pageName(path) {
+  if (PAGE_NAMES[path]) return PAGE_NAMES[path];
+  const g = path.match(/^\/guides\/(.+)\.html$/);
+  if (g) { const t = g[1].replace(/-/g, " "); return "Guide: " + t.charAt(0).toUpperCase() + t.slice(1); }
+  return path;
+}
+// friendly names, with "/" and "/index.html" combined into one Home page row
+function friendlyPages(rows) {
+  const totals = new Map();
+  for (const r of rows) { const name = pageName(r.path); totals.set(name, (totals.get(name) || 0) + r.n); }
+  return [...totals].map(([name, n]) => ({ name, n })).sort((a, b) => b.n - a.n).slice(0, 8);
+}
+function friendlySources(rows) {
+  const totals = new Map();
+  for (const r of rows) { const name = r.source === "(unknown)" ? "Unknown" : pageName(r.source); totals.set(name, (totals.get(name) || 0) + r.n); }
+  return [...totals].map(([name, n]) => ({ name, n })).sort((a, b) => b.n - a.n);
+}
 async function dashboard(main, s) {
   const stat = (n, label) => el("div", { class: "card stat" }, el("b", {}, n), el("span", {}, label));
   main.append(el("div", { class: "cards" },
@@ -91,7 +109,7 @@ async function dashboard(main, s) {
     el("div", { class: "legend" }, el("span", {}, el("i", { class: "dot", style: "background:var(--plum)" }), "Page views"), el("span", {}, el("i", { class: "dot", style: "background:var(--rose)" }), "Sign-ups"))));
   const list = (title, rows, a, b) => el("div", { class: "card" }, el("h3", {}, title),
     rows.length ? el("table", {}, rows.map((r) => el("tr", {}, el("td", {}, r[a]), el("td", {}, r[b])))) : el("p", { class: "hint" }, "No data yet."));
-  main.append(el("div", { class: "two", style: "margin-top:14px" }, list("Top pages (14 days)", s.topPages, "path", "n"), list("Where sign-ups come from", s.sources, "source", "n")));
+  main.append(el("div", { class: "two", style: "margin-top:14px" }, list("Top pages (14 days)", friendlyPages(s.topPages), "name", "n"), list("Where sign-ups come from", friendlySources(s.sources), "name", "n")));
 }
 
 /* ---------- Paged tables ---------- */
