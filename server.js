@@ -17,7 +17,7 @@ const PORT = process.env.PORT || 3000;
 const { SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS, MAIL_FROM } = process.env;
 const PUBLIC_URL = (process.env.PUBLIC_URL || `http://localhost:${PORT}`).replace(/\/$/, "");
 const MAX_VIDEO = 100 * 1024 * 1024; // 100 MB
-const TRUST_PROXY = process.env.TRUST_PROXY === "1";
+const TRUST_PROXY = process.env.TRUST_PROXY === "1" || !!process.env.RENDER; // Render always sits behind a proxy and sets RENDER=true
 const IS_PROD = process.env.NODE_ENV === "production";
 if (!SESSION_SECRET || SESSION_SECRET.length < 32) { console.error("Set SESSION_SECRET (32+ chars) in .env"); process.exit(1); }
 
@@ -47,7 +47,7 @@ async function connect() {
         db.collection("admins").createIndex({ email: 1 }, { unique: true }),
       ]);
       await ensureAdmin();
-      console.log("MongoDB connected.");
+      console.log(`MongoDB connected (database: ${db.databaseName}).`);
       return;
     } catch (e) {
       console.error("MongoDB connection failed, retrying in 10s:", e.message);
@@ -66,10 +66,15 @@ async function checkPw(pw, rec) {
 }
 async function ensureAdmin() {
   const admins = db.collection("admins");
-  if (await admins.countDocuments() || !ADMIN_EMAIL || !ADMIN_PASSWORD) return;
-  const { salt, hash } = await hashPw(ADMIN_PASSWORD);
-  await admins.insertOne({ email: ADMIN_EMAIL.toLowerCase(), salt, hash, createdAt: new Date() });
-  console.log(`Created admin account ${ADMIN_EMAIL} (password is ADMIN_PASSWORD in .env). Change it in the admin panel.`);
+  const email = (ADMIN_EMAIL || "").trim().toLowerCase(), password = (ADMIN_PASSWORD || "").trim();
+  if (!email || !password) return;
+  const exists = await admins.countDocuments();
+  // First run creates the admin. Setting ADMIN_SYNC=1 for one deploy resets the admin to the ADMIN_EMAIL / ADMIN_PASSWORD values (use if you are locked out).
+  if (exists && process.env.ADMIN_SYNC !== "1") return;
+  const { salt, hash } = await hashPw(password);
+  if (exists) await admins.deleteMany({});
+  await admins.insertOne({ email, salt, hash, createdAt: new Date() });
+  console.log(`${exists ? "Reset" : "Created"} admin account ${email} from ADMIN_EMAIL / ADMIN_PASSWORD. Change the password in the admin panel${exists ? " and remove ADMIN_SYNC" : ""}.`);
 }
 
 const clientIp = (req) => (TRUST_PROXY && req.headers["x-forwarded-for"]?.split(",")[0].trim()) || req.socket.remoteAddress || "";
@@ -270,7 +275,7 @@ async function adminApi(req, res, path, url) {
     if (!db) return json(res, 503, { error: "Database unavailable" });
     let d; try { d = await readBody(req); } catch { return json(res, 400, { error: "bad request" }); }
     const rec = await db.collection("admins").findOne({ email: clean(d.email, 254).toLowerCase() });
-    const ok = rec ? await checkPw(String(d.password ?? ""), rec) : (await hashPw("x"), false); // equalise timing
+    const ok = rec ? await checkPw(String(d.password ?? "").trim(), rec) : (await hashPw("x"), false); // equalise timing
     await log(ok ? "admin_login" : "admin_login_failed", req, { email: clean(d.email, 254) });
     if (!ok) { record("l" + ip); return json(res, 401, { error: "Wrong email or password." }); }
     return json(res, 200, { ok: true, email: rec.email }, { "Set-Cookie": cookie(makeToken(rec.email), 8 * 3600) });
@@ -438,8 +443,8 @@ async function adminApi(req, res, path, url) {
   if (path === "/api/admin/password" && req.method === "POST") {
     let d; try { d = await readBody(req); } catch { return json(res, 400, { error: "bad request" }); }
     const rec = await db.collection("admins").findOne({ email: session.email });
-    if (!rec || !(await checkPw(String(d.current ?? ""), rec))) return json(res, 400, { error: "Current password is wrong." });
-    const next = String(d.next ?? "");
+    if (!rec || !(await checkPw(String(d.current ?? "").trim(), rec))) return json(res, 400, { error: "Current password is wrong." });
+    const next = String(d.next ?? "").trim();
     if (next.length < 10) return json(res, 400, { error: "New password must be at least 10 characters." });
     const { salt, hash } = await hashPw(next);
     await db.collection("admins").updateOne({ email: session.email }, { $set: { salt, hash } });

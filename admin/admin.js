@@ -33,8 +33,9 @@ let unread = 0;
 /* ---------- Login ---------- */
 function showLogin() {
   const msg = el("p", { class: "msg", role: "status" });
-  const email = el("input", { type: "email", required: true, autocomplete: "username" });
-  const pw = el("input", { type: "password", required: true, autocomplete: "current-password" });
+  const email = el("input", { type: "email", required: true, autocomplete: "username", autocapitalize: "none", autocorrect: "off", spellcheck: "false" });
+  const pw = el("input", { type: "password", required: true, autocomplete: "current-password", autocapitalize: "none", autocorrect: "off", spellcheck: "false" });
+  const show = el("input", { type: "checkbox", onchange: () => { pw.type = show.checked ? "text" : "password"; } });
   app.replaceChildren(el("form", { class: "login", onsubmit: async (e) => {
     e.preventDefault(); msg.className = "msg"; msg.textContent = "Signing in…";
     try { const r = await api("/login", { method: "POST", body: { email: email.value, password: pw.value } }); me = r.email; start(); }
@@ -42,6 +43,7 @@ function showLogin() {
   } },
     el("h1", {}, "The Beauty Journal"), el("p", { class: "hint" }, "Admin sign-in"),
     el("label", {}, "Email"), email, el("label", {}, "Password"), pw,
+    el("label", { style: "display:flex;gap:8px;align-items:center;font-weight:400;margin-top:8px" }, show, "Show password"),
     el("button", { class: "btn", style: "width:100%;margin-top:18px", type: "submit" }, "Sign in"), msg));
 }
 
