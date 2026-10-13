@@ -11,7 +11,7 @@ const OUT = dirname(fileURLToPath(import.meta.url));
 const BUILD_ID = Date.now().toString(36); // appended to css/js links so browsers always fetch the new files
 const SITE = {
   name: "The Beauty Journal",
-  url: "https://www.example.com", // ← your real domain (used for canonical URLs + sitemap)
+  url: "https://beautyjournals.com", // your live domain (used for canonical URLs, social cards and the sitemap)
   email: "hello@example.com",     // ← your real contact email
   updated: "2026-10-05",
   updatedLabel: "5 October 2026",
@@ -45,7 +45,7 @@ const NAV = [
 
 function layout({ title, desc, path, root = "", body, jsonld = [], og = "website", noindex = false }) {
   const fullTitle = title.includes(SITE.name) ? title : `${title} | ${SITE.name}`;
-  const url = `${SITE.url}/${path}`;
+  const url = path === "index.html" ? `${SITE.url}/` : `${SITE.url}/${path}`;
   const nav = NAV.map(([h, t]) => `<li><a href="${root}${h}"${path === h ? ' aria-current="page"' : ""}>${t}</a></li>`).join("");
   const ld = jsonld.map((j) => `<script type="application/ld+json">${JSON.stringify(j)}</script>`).join("\n");
   return `<!doctype html>
@@ -758,7 +758,7 @@ const files = {
   ...Object.fromEntries(GUIDES.map((g) => [`guides/${g.slug}.html`, articlePage(g)])),
 };
 const urls = Object.keys(files).filter((f) => f !== "404.html");
-files["sitemap.xml"] = `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${urls.map((u) => `  <url><loc>${SITE.url}/${u}</loc><lastmod>${SITE.updated}</lastmod></url>`).join("\n")}\n</urlset>\n`;
+files["sitemap.xml"] = `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${urls.map((u) => `  <url><loc>${SITE.url}/${u === "index.html" ? "" : u}</loc><lastmod>${SITE.updated}</lastmod></url>`).join("\n")}\n</urlset>\n`;
 files["robots.txt"] = `User-agent: *\nAllow: /\nSitemap: ${SITE.url}/sitemap.xml\n`;
 files["favicon.svg"] = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><rect width="64" height="64" rx="16" fill="#5b2a4e"/><text x="32" y="45" text-anchor="middle" font-family="Georgia,serif" font-size="38" font-weight="700" font-style="italic" fill="#f3d9d4">B</text></svg>\n`;
 

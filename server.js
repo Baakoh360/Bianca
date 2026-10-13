@@ -136,13 +136,14 @@ const DEFAULT_SETTINGS = {
   clubPerks: [],
   clubPosts: [],
   gaId: "",
+  gscToken: "",
   socials: {},
   qna: { title: "", when: "", link: "" },
   contactEmail: "",
 };
 async function getSettings() {
   const s = db ? await db.collection("settings").findOne({ _id: "site" }) : null;
-  return { ...DEFAULT_SETTINGS, ...(s || {}), announcement: { ...DEFAULT_SETTINGS.announcement, ...(s?.announcement || {}) }, videos: { ...DEFAULT_SETTINGS.videos, ...(s?.videos || {}) }, videoFiles: { ...DEFAULT_SETTINGS.videoFiles, ...(s?.videoFiles || {}) }, videoNames: { ...DEFAULT_SETTINGS.videoNames, ...(s?.videoNames || {}) }, videoTitles: { ...DEFAULT_SETTINGS.videoTitles, ...(s?.videoTitles || {}) }, clubPerks: s?.clubPerks || [], clubPosts: s?.clubPosts || [], gaId: s?.gaId || "", socials: s?.socials || {}, qna: { ...DEFAULT_SETTINGS.qna, ...(s?.qna || {}) } };
+  return { ...DEFAULT_SETTINGS, ...(s || {}), announcement: { ...DEFAULT_SETTINGS.announcement, ...(s?.announcement || {}) }, videos: { ...DEFAULT_SETTINGS.videos, ...(s?.videos || {}) }, videoFiles: { ...DEFAULT_SETTINGS.videoFiles, ...(s?.videoFiles || {}) }, videoNames: { ...DEFAULT_SETTINGS.videoNames, ...(s?.videoNames || {}) }, videoTitles: { ...DEFAULT_SETTINGS.videoTitles, ...(s?.videoTitles || {}) }, clubPerks: s?.clubPerks || [], clubPosts: s?.clubPosts || [], gaId: s?.gaId || "", gscToken: s?.gscToken || "", socials: s?.socials || {}, qna: { ...DEFAULT_SETTINGS.qna, ...(s?.qna || {}) } };
 }
 const ytId = (v) => { const m = String(v).match(/(?:v=|youtu\.be\/|embed\/|shorts\/)?([A-Za-z0-9_-]{11})(?:[?&].*)?$/); return m ? m[1] : ""; };
 
@@ -433,14 +434,18 @@ async function adminApi(req, res, path, url) {
       const qna = { title: clean(d.qna?.title, 100), when: clean(d.qna?.when, 100), link: safeLink(d.qna?.link) };
       const gaId = clean(d.gaId, 20).toUpperCase();
       if (gaId && !/^G-[A-Z0-9]{6,12}$/.test(gaId)) return json(res, 400, { error: "The Google Analytics ID should look like G-ABC123XYZ4." });
+      let gscToken = clean(d.gscToken, 300);
+      const fromTag = gscToken.match(/content=["']([^"']+)["']/i); if (fromTag) gscToken = fromTag[1];
+      if (gscToken && !/^[A-Za-z0-9_-]{20,100}$/.test(gscToken)) return json(res, 400, { error: "That doesn't look like a Search Console verification code. Paste the code from the HTML tag option." });
       const socials = {};
       for (const k of ["instagram", "tiktok", "youtube", "facebook", "x", "pinterest", "linkedin"]) {
         const u = clean(d.socials?.[k], 200);
         if (u && !/^https:\/\//i.test(u)) return json(res, 400, { error: `The ${k} link must start with https://` });
         if (u) socials[k] = u;
       }
-      const next = { gaId, socials, clubPerks, clubPosts, qna, announcement: { enabled: !!d.announcement?.enabled, text: clean(d.announcement?.text, 200), link }, videos, videoTitles, contactEmail: clean(d.contactEmail, 254) };
+      const next = { gaId, gscToken, socials, clubPerks, clubPosts, qna, announcement: { enabled: !!d.announcement?.enabled, text: clean(d.announcement?.text, 200), link }, videos, videoTitles, contactEmail: clean(d.contactEmail, 254) };
       await db.collection("settings").updateOne({ _id: "site" }, { $set: next }, { upsert: true });
+      headCache.t = 0;
       await log("settings_updated", req, { by: session.email });
       return json(res, 200, { ok: true, settings: next });
     }
@@ -517,6 +522,14 @@ async function adminApi(req, res, path, url) {
 }
 
 /* ---------- Static files ---------- */
+const headCache = { t: 0, tag: "" };
+async function headTags() {
+  if (Date.now() - headCache.t < 60000) return headCache.tag;
+  let tag = "";
+  try { const st = await getSettings(); if (st.gscToken) tag = `<meta name="google-site-verification" content="${st.gscToken}">\n`; } catch { /* no database yet */ }
+  headCache.t = Date.now(); headCache.tag = tag;
+  return tag;
+}
 function siteOrigin(req) {
   if (process.env.PUBLIC_URL && !/localhost/.test(process.env.PUBLIC_URL)) return process.env.PUBLIC_URL.replace(/\/$/, "");
   const proto = (TRUST_PROXY && req.headers["x-forwarded-proto"]) || "http";
@@ -531,7 +544,7 @@ async function serveStatic(req, res, path) {
   if (!file.startsWith(ROOT)) throw Object.assign(new Error(), { code: "ENOENT" });
   const st = await stat(file);
   const etag = `W/"${st.size.toString(16)}-${Math.floor(st.mtimeMs).toString(16)}"`;
-  if (req.headers["if-none-match"] === etag && !path.startsWith("/admin/")) { res.writeHead(304, { ETag: etag, "Cache-Control": "no-cache" }); return res.end(); }
+  if (req.headers["if-none-match"] === etag && !path.startsWith("/admin/") && ext !== ".html") { res.writeHead(304, { ETag: etag, "Cache-Control": "no-cache" }); return res.end(); }
   const data = await readFile(file);
   const ext = extname(file);
   const headers = { "Content-Type": TYPES[ext] || "application/octet-stream", "X-Content-Type-Options": "nosniff", "Referrer-Policy": "strict-origin-when-cross-origin" };
@@ -543,7 +556,11 @@ async function serveStatic(req, res, path) {
     if (req.method === "GET") log("download", req, { file: path });
   }
   let out = data;
-  if ([".html", ".xml", ".txt"].includes(ext)) out = Buffer.from(data.toString("utf8").replaceAll("https://www.example.com", siteOrigin(req)));
+  if ([".html", ".xml", ".txt"].includes(ext)) {
+    let text = data.toString("utf8").replaceAll("https://www.example.com", siteOrigin(req));
+    if (ext === ".html" && !path.startsWith("/admin/")) { const tag = await headTags(); if (tag) text = text.replace("</head>", () => tag + "</head>"); }
+    out = Buffer.from(text);
+  }
   res.writeHead(200, headers);
   res.end(req.method === "HEAD" ? undefined : out);
 }

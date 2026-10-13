@@ -318,6 +318,7 @@ async function settingsView(main) {
   const postRows = [...Array(4)].map((_, i) => { const p = (s.clubPosts || [])[i] || {}; return { title: el("input", { type: "text", maxlength: 100, value: p.title || "", placeholder: "Post title, e.g. October tip: protect your lashes" }), text: el("textarea", { rows: 3, maxlength: 1200, placeholder: "Write your update or tip here..." }, p.text || "") }; });
   const qna = { title: el("input", { type: "text", maxlength: 100, value: s.qna?.title || "", placeholder: "e.g. October live Q&A with a lash technician" }), when: el("input", { type: "text", maxlength: 100, value: s.qna?.when || "", placeholder: "e.g. Thursday 30 October, 7pm" }), link: el("input", { type: "text", value: s.qna?.link || "", placeholder: "Join link (Zoom / Instagram Live / YouTube)" }) };
   const ga = el("input", { type: "text", value: s.gaId || "", placeholder: "G-ABC123XYZ4", maxlength: 20 });
+  const gsc = el("input", { type: "text", value: s.gscToken || "", placeholder: "Paste the verification code from Google Search Console" });
   const socialNames = { instagram: "Instagram", tiktok: "TikTok", youtube: "YouTube", facebook: "Facebook", x: "X (Twitter)", pinterest: "Pinterest", linkedin: "LinkedIn" };
   const socials = {}; for (const k of Object.keys(socialNames)) socials[k] = el("input", { type: "text", value: s.socials?.[k] || "", placeholder: "https://..." });
   const msg = el("p", { class: "msg", role: "status" });
@@ -325,7 +326,7 @@ async function settingsView(main) {
   main.append(el("form", { class: "card", style: "max-width:680px", onsubmit: async (e) => {
     e.preventDefault(); msg.className = "msg"; msg.textContent = "Saving…";
     try {
-      await api("/settings", { method: "PUT", body: { announcement: { enabled: on.checked, text: text.value, link: link.value }, videos: Object.fromEntries(Object.entries(vids).map(([k, i]) => [k, i.value])), videoTitles: Object.fromEntries(Object.entries(titles).map(([k, i]) => [k, i.value])), gaId: ga.value, socials: Object.fromEntries(Object.entries(socials).map(([k, i]) => [k, i.value])), clubPosts: postRows.map((r) => ({ title: r.title.value, text: r.text.value })), clubPerks: perkRows.map((r) => ({ title: r.title.value, text: r.text.value, code: r.code.value, link: r.link.value })), qna: { title: qna.title.value, when: qna.when.value, link: qna.link.value }, contactEmail: s.contactEmail } });
+      await api("/settings", { method: "PUT", body: { announcement: { enabled: on.checked, text: text.value, link: link.value }, videos: Object.fromEntries(Object.entries(vids).map(([k, i]) => [k, i.value])), videoTitles: Object.fromEntries(Object.entries(titles).map(([k, i]) => [k, i.value])), gaId: ga.value, gscToken: gsc.value, socials: Object.fromEntries(Object.entries(socials).map(([k, i]) => [k, i.value])), clubPosts: postRows.map((r) => ({ title: r.title.value, text: r.text.value })), clubPerks: perkRows.map((r) => ({ title: r.title.value, text: r.text.value, code: r.code.value, link: r.link.value })), qna: { title: qna.title.value, when: qna.when.value, link: qna.link.value }, contactEmail: s.contactEmail } });
       msg.className = "msg ok"; msg.textContent = "Saved. Changes are live on the website.";
     } catch (err) { msg.className = "msg err"; msg.textContent = err.message; }
   } },
@@ -337,6 +338,9 @@ async function settingsView(main) {
     el("h3", { style: "margin-top:26px" }, "Google Analytics"),
     el("p", { class: "hint" }, "Optional. Paste your GA4 Measurement ID (starts with G-). Visitors are asked for cookie permission first, and Google Analytics only loads if they accept. The Analytics page here works without it."),
     ga,
+    el("h3", { style: "margin-top:26px" }, "Google Search Console (get found on Google)"),
+    el("p", { class: "hint" }, "In Search Console choose \"URL prefix\", enter your website address, pick the \"HTML tag\" verification method, and paste the code (or the whole tag) here. Save, then click Verify in Google."),
+    gsc,
     el("h3", { style: "margin-top:26px" }, "Social media links"),
     el("p", { class: "hint" }, "Shown as icons in the website footer. Leave blank for any you don't use."),
     Object.entries(socialNames).map(([k, n]) => [el("label", {}, n), socials[k]]),

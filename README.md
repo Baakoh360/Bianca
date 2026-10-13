@@ -41,3 +41,7 @@ Toolkit sources: tools/toolkit-*.html (re-export to PDF like the Survival Guide)
 - Campaign link builder: make a tracked link (utm_source / utm_medium / utm_campaign) for every social post, ad or email. Visits and sign-ups are credited to the campaign.
 - Optional Google Analytics 4: paste the Measurement ID (G-...) in Site settings. It loads only after a visitor accepts the cookie banner.
 - Social links (footer), share buttons on every guide (with tracking), Open Graph / Twitter cards, canonical links and sitemap use the live web address automatically (set PUBLIC_URL on the host to force one).
+
+## Google Search Console (get found on Google)
+Admin > Site settings > Google Search Console: paste the verification code from Search Console's "HTML tag" method; the site then adds the tag to every page.
+Then in Search Console submit https://YOUR-SITE/sitemap.xml. robots.txt already allows crawling; the admin area is marked noindex.
