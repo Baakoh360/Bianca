@@ -35,3 +35,9 @@ After joining, people land on /club.html: their Survival Guide, two printable to
 Perks and Q&A are set in Admin > Site settings (leave blank until you have them; members then see an honest "coming soon").
 Members are recognised by the email they joined with (stored in their browser); "Already a member?" lets them reopen it on another device.
 Toolkit sources: tools/toolkit-*.html (re-export to PDF like the Survival Guide).
+
+## Marketing and analytics (Admin > Analytics)
+- First-party, cookie-free analytics: page views, unique visitors, sign-ups, visitor-to-sign-up rate, traffic sources, devices, tracked campaigns. Export CSV for reports.
+- Campaign link builder: make a tracked link (utm_source / utm_medium / utm_campaign) for every social post, ad or email. Visits and sign-ups are credited to the campaign.
+- Optional Google Analytics 4: paste the Measurement ID (G-...) in Site settings. It loads only after a visitor accepts the cookie banner.
+- Social links (footer), share buttons on every guide (with tracking), Open Graph / Twitter cards, canonical links and sitemap use the live web address automatically (set PUBLIC_URL on the host to force one).

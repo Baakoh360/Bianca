@@ -62,7 +62,9 @@ ${noindex ? '<meta name="robots" content="noindex">' : `<link rel="canonical" hr
 <meta property="og:title" content="${fullTitle}">
 <meta property="og:description" content="${desc}">
 <meta property="og:url" content="${url}">
-<meta name="twitter:card" content="summary">
+<meta property="og:image" content="${SITE.url}/images/home-hero.jpg">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:image" content="${SITE.url}/images/home-hero.jpg">
 <link rel="icon" href="${root}favicon.svg" type="image/svg+xml">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -86,7 +88,7 @@ ${body.replaceAll("@ROOT@", root)}
 <footer class="site-footer">
   <div class="wrap">
     <div class="footer-grid">
-      <div><h4>The Beauty Journal</h4><p>Honest hair, lash &amp; nail education for women 18–35. No sponsored fluff.</p></div>
+      <div><h4>The Beauty Journal</h4><p>Honest hair, lash &amp; nail education for women 18–35. No sponsored fluff.</p><div class="footer-socials" id="footer-socials"></div></div>
       <div><h4>Explore</h4><a href="${root}hair.html">Hair Extensions</a><a href="${root}lash.html">Lash Care</a><a href="${root}nails.html">Nail Maintenance</a><a href="${root}guides/what-beauty-upkeep-really-costs.html">Cost Breakdown</a></div>
       <div><h4>The Journal</h4><a href="${root}about.html">About</a><a href="${root}contact.html">Contact</a><a href="${root}club.html">Insider Club</a><a href="${root}privacy.html">Privacy</a></div>
     </div>
@@ -360,6 +362,7 @@ function articlePage(g) {
           <p class="form-msg" role="status"></p>
         </form>
       </aside>
+      <div class="share-row"><strong>Share this guide</strong><a data-share="whatsapp" href="#">WhatsApp</a><a data-share="facebook" href="#">Facebook</a><a data-share="x" href="#">X</a><a data-share="pinterest" href="#">Pinterest</a><a data-share="copy" href="#">Copy link</a></div>
       <h2 id="faq">Frequently asked questions</h2>
       <div class="faq">${faq}</div>
       <p class="disclaimer">This guide is educational and not medical advice. Always patch test new products, follow your technician's instructions and seek professional help if you have pain, swelling or an allergic reaction.</p>
@@ -628,7 +631,7 @@ function privacyPage() {
 <h2>Who processes it</h2>
 <p>Subscriber details are stored in a secured MongoDB Atlas database (and in any email service we use to send newsletters, which processes data on our behalf). We do not sell your data.</p>
 <h2>Analytics and storage</h2>
-<p>We record anonymous page views (page visited, referring site and a one-way scrambled visitor ID, never your IP address) and keep these logs for 180 days. We use no advertising cookies. Your browser's local storage remembers that you have subscribed or dismissed a pop-up. Videos load from YouTube's privacy-enhanced mode only when you press play.</p>
+<p>We record anonymous page views (page visited, referring site and a one-way scrambled visitor ID, never your IP address) and keep these logs for 180 days. We use no advertising cookies. If Google Analytics is switched on, it only loads after you click Accept on the cookie banner, and you can decline. Your browser's local storage remembers that you have subscribed or dismissed a pop-up. Videos load from YouTube's privacy-enhanced mode only when you press play.</p>
 <h2>Your rights</h2>
 <p>You can ask to access, correct or delete your data, or object to processing, by emailing us. You may also complain to the Information Commissioner's Office (ico.org.uk).</p>
 <h2>Retention</h2>

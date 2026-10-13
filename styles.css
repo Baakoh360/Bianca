@@ -345,3 +345,15 @@ img.art { object-fit: cover; background: var(--blush); }
 .card-m + .card-m { margin-top: 20px; }
 .member-grid + .card-m { margin-top: 0; }
 @media (max-width: 860px) { .tracker-list { grid-template-columns: 1fr; } .library { grid-template-columns: 1fr 1fr; } }
+
+/* ---- marketing: consent, share, socials ---- */
+.consent { position: fixed; left: 16px; bottom: 16px; z-index: 95; max-width: 420px; background: #fff; border: 1px solid var(--line); border-radius: 16px; box-shadow: 0 12px 40px rgba(63,27,54,.2); padding: 16px 18px; font-size: .9rem; }
+.consent p { margin: 0 0 12px; } .consent a { color: var(--plum); }
+.consent-btns { display: flex; gap: 8px; }
+@media (max-width: 520px) { .consent { left: 8px; right: 8px; bottom: 8px; max-width: none; } }
+.share-row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin: 2em 0 1em; padding: 14px 16px; background: var(--surface); border: 1px solid var(--line); border-radius: 14px; }
+.share-row strong { margin-right: 6px; }
+.share-row a { text-decoration: none; background: var(--blush); color: var(--plum); font-weight: 600; font-size: .85rem; padding: 7px 14px; border-radius: 999px; transition: background .2s, color .2s; }
+.share-row a:hover { background: var(--plum); color: #fff; }
+.footer-socials { display: flex; flex-wrap: wrap; gap: 8px 16px; margin-top: 12px; }
+.footer-socials a { display: inline-block; margin: 0; font-weight: 600; }

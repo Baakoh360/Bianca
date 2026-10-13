@@ -48,8 +48,8 @@ function showLogin() {
 }
 
 /* ---------- Shell ---------- */
-const views = { dashboard, subscribers, messages, settings: settingsView, activity };
-const titles = { dashboard: "Dashboard", subscribers: "Subscribers", messages: "Messages", settings: "Site settings", activity: "Activity log" };
+const views = { dashboard, analytics: analyticsView, subscribers, messages, settings: settingsView, activity };
+const titles = { dashboard: "Dashboard", analytics: "Analytics", subscribers: "Subscribers", messages: "Messages", settings: "Site settings", activity: "Activity log" };
 
 async function start() {
   try { me = (await api("/me")).email; } catch { return; }
@@ -75,6 +75,56 @@ async function navigate(view) {
   main.append(loading);
   try { await views[view](main, st); } catch (e) { if (e.message !== "signed out") main.append(el("p", { class: "msg err" }, e.message)); }
   loading.remove();
+}
+
+/* ---------- Analytics ---------- */
+const LINK_PAGES = [["/", "Home page"], ["/club.html", "Insider Club page"], ["/hair.html", "Hair page"], ["/lash.html", "Lash page"], ["/nails.html", "Nails page"], ["/guides/how-to-blend-clip-in-extensions-with-short-hair.html", "Guide: blend clip-ins"], ["/guides/how-to-care-for-lash-extensions-and-gel-nails.html", "Guide: lash and nail care"], ["/guides/what-beauty-upkeep-really-costs.html", "Guide: what upkeep costs"]];
+
+function linkBuilder() {
+  const page = el("select", {}, LINK_PAGES.map(([v, t]) => el("option", { value: v }, t)));
+  const source = el("input", { type: "text", list: "utm-sources", value: "instagram", placeholder: "instagram, tiktok, facebook..." });
+  const list = el("datalist", { id: "utm-sources" }, ["instagram", "tiktok", "facebook", "x", "linkedin", "youtube", "pinterest", "whatsapp", "google", "newsletter"].map((v) => el("option", { value: v })));
+  const medium = el("select", {}, ["social", "cpc", "email", "influencer", "referral"].map((v) => el("option", { value: v }, v)));
+  const campaign = el("input", { type: "text", value: "launch", placeholder: "e.g. launch, lash-week" });
+  const out = el("input", { type: "text", readonly: true, style: "font-family:monospace" });
+  const msg = el("span", { class: "hint" });
+  const slug = (v) => v.trim().toLowerCase().replace(/[^a-z0-9_-]+/g, "-").replace(/^-+|-+$/g, "");
+  const update = () => { out.value = location.origin + page.value + `?utm_source=${encodeURIComponent(slug(source.value))}&utm_medium=${encodeURIComponent(slug(medium.value))}&utm_campaign=${encodeURIComponent(slug(campaign.value))}`; };
+  for (const i of [page, source, medium, campaign]) { i.addEventListener("input", update); i.addEventListener("change", update); }
+  update();
+  return el("div", { class: "card", style: "margin-top:14px;max-width:760px" },
+    el("h3", {}, "Campaign link builder"),
+    el("p", { class: "hint" }, "Make a tracked link for each social post, ad or email. Visits and sign-ups that come from it appear in the tables above, so you can compare channels."),
+    el("label", {}, "Page"), page, el("label", {}, "Channel (source)"), source, list, el("label", {}, "Type (medium)"), medium, el("label", {}, "Campaign name"), campaign,
+    el("label", {}, "Your tracked link"), el("div", { class: "row" }, out, el("button", { class: "btn small", type: "button", onclick: async () => { try { await navigator.clipboard.writeText(out.value); msg.textContent = "Copied"; } catch { out.select(); msg.textContent = "Press Ctrl+C to copy"; } } }, "Copy"), msg));
+}
+
+async function analyticsView(main) {
+  let days = 30;
+  const box = el("div");
+  const exportLink = el("a", { class: "btn ghost", href: "/api/admin/analytics/export?days=30" }, "Export CSV");
+  const sel = el("select", { style: "max-width:200px", onchange: () => { days = +sel.value; exportLink.href = "/api/admin/analytics/export?days=" + days; load(); } }, [7, 30, 90].map((d) => el("option", { value: d, selected: d === 30 }, `Last ${d} days`)));
+  main.append(el("div", { class: "row", style: "margin-bottom:14px;flex-wrap:wrap" }, sel, exportLink), box, linkBuilder());
+  const table = (title, head, rows) => el("div", { class: "card" }, el("h3", {}, title), rows.length ? el("table", {}, el("thead", {}, el("tr", {}, head.map((h) => el("th", {}, h)))), el("tbody", {}, rows.map((r) => el("tr", {}, r.map((c) => el("td", {}, String(c))))))) : el("p", { class: "hint" }, "No data yet. Share a tracked link to start collecting it."));
+  async function load() {
+    box.replaceChildren(el("p", { class: "hint" }, "Loading…"));
+    const a = await api("/analytics?days=" + days);
+    const stat = (n, label) => el("div", { class: "card stat" }, el("b", {}, n), el("span", {}, label));
+    const max = Math.max(1, ...a.series.map((d) => Math.max(d.views, d.signups)));
+    const bars = el("div", { class: "bars" });
+    for (const d of a.series) { bars.append(el("div", { title: `${d.day}: ${d.views} views, ${d.visitors} visitors`, style: `height:${(d.views / max) * 100}%` })); bars.append(el("div", { class: "s", title: `${d.day}: ${d.signups} sign-ups`, style: `height:${(d.signups / max) * 100}%` })); }
+    const totalDev = a.devices.reduce((s, x) => s + x.n, 0) || 1;
+    box.replaceChildren(
+      el("div", { class: "cards" }, stat(a.views, "Page views"), stat(a.visitors, "Unique visitors"), stat(a.signups, "Club sign-ups"), stat(a.conversion + "%", "Visitor → sign-up rate"), stat(a.viewsPerVisitor, "Pages per visitor"), stat(a.downloads, "PDF downloads")),
+      el("div", { class: "card" }, el("h3", {}, `Daily traffic, last ${a.days} days`), bars, el("div", { class: "legend" }, el("span", {}, el("i", { class: "dot", style: "background:var(--plum)" }), "Page views"), el("span", {}, el("i", { class: "dot", style: "background:var(--rose)" }), "Sign-ups"))),
+      el("div", { class: "two", style: "margin-top:14px" },
+        table("Where visitors come from", ["Source", "Page views"], a.sources.map((x) => [x.source, x.n])),
+        table("Tracked campaigns", ["Channel", "Type", "Campaign", "Views"], a.campaigns.map((x) => [x.source, x.medium, x.campaign, x.n]))),
+      el("div", { class: "two", style: "margin-top:14px" },
+        table("Sign-ups by campaign", ["Campaign", "Sign-ups"], a.signupCampaigns.map((x) => [x.campaign, x.n])),
+        table("Devices", ["Device", "Share of views"], a.devices.map((x) => [x.device, Math.round((x.n / totalDev) * 100) + "%"]))));
+  }
+  await load();
 }
 
 /* ---------- Dashboard ---------- */
@@ -267,12 +317,15 @@ async function settingsView(main) {
   const perkRows = [...Array(4)].map((_, i) => { const p = (s.clubPerks || [])[i] || {}; return { title: el("input", { type: "text", maxlength: 80, value: p.title || "", placeholder: "Offer title, e.g. 15% off at Brand X" }), text: el("input", { type: "text", maxlength: 300, value: p.text || "", placeholder: "Details" }), code: el("input", { type: "text", maxlength: 40, value: p.code || "", placeholder: "Discount code (optional)" }), link: el("input", { type: "text", value: p.link || "", placeholder: "Link (optional)" }) }; });
   const postRows = [...Array(4)].map((_, i) => { const p = (s.clubPosts || [])[i] || {}; return { title: el("input", { type: "text", maxlength: 100, value: p.title || "", placeholder: "Post title, e.g. October tip: protect your lashes" }), text: el("textarea", { rows: 3, maxlength: 1200, placeholder: "Write your update or tip here..." }, p.text || "") }; });
   const qna = { title: el("input", { type: "text", maxlength: 100, value: s.qna?.title || "", placeholder: "e.g. October live Q&A with a lash technician" }), when: el("input", { type: "text", maxlength: 100, value: s.qna?.when || "", placeholder: "e.g. Thursday 30 October, 7pm" }), link: el("input", { type: "text", value: s.qna?.link || "", placeholder: "Join link (Zoom / Instagram Live / YouTube)" }) };
+  const ga = el("input", { type: "text", value: s.gaId || "", placeholder: "G-ABC123XYZ4", maxlength: 20 });
+  const socialNames = { instagram: "Instagram", tiktok: "TikTok", youtube: "YouTube", facebook: "Facebook", x: "X (Twitter)", pinterest: "Pinterest", linkedin: "LinkedIn" };
+  const socials = {}; for (const k of Object.keys(socialNames)) socials[k] = el("input", { type: "text", value: s.socials?.[k] || "", placeholder: "https://..." });
   const msg = el("p", { class: "msg", role: "status" });
 
   main.append(el("form", { class: "card", style: "max-width:680px", onsubmit: async (e) => {
     e.preventDefault(); msg.className = "msg"; msg.textContent = "Saving…";
     try {
-      await api("/settings", { method: "PUT", body: { announcement: { enabled: on.checked, text: text.value, link: link.value }, videos: Object.fromEntries(Object.entries(vids).map(([k, i]) => [k, i.value])), videoTitles: Object.fromEntries(Object.entries(titles).map(([k, i]) => [k, i.value])), clubPosts: postRows.map((r) => ({ title: r.title.value, text: r.text.value })), clubPerks: perkRows.map((r) => ({ title: r.title.value, text: r.text.value, code: r.code.value, link: r.link.value })), qna: { title: qna.title.value, when: qna.when.value, link: qna.link.value }, contactEmail: s.contactEmail } });
+      await api("/settings", { method: "PUT", body: { announcement: { enabled: on.checked, text: text.value, link: link.value }, videos: Object.fromEntries(Object.entries(vids).map(([k, i]) => [k, i.value])), videoTitles: Object.fromEntries(Object.entries(titles).map(([k, i]) => [k, i.value])), gaId: ga.value, socials: Object.fromEntries(Object.entries(socials).map(([k, i]) => [k, i.value])), clubPosts: postRows.map((r) => ({ title: r.title.value, text: r.text.value })), clubPerks: perkRows.map((r) => ({ title: r.title.value, text: r.text.value, code: r.code.value, link: r.link.value })), qna: { title: qna.title.value, when: qna.when.value, link: qna.link.value }, contactEmail: s.contactEmail } });
       msg.className = "msg ok"; msg.textContent = "Saved. Changes are live on the website.";
     } catch (err) { msg.className = "msg err"; msg.textContent = err.message; }
   } },
@@ -281,6 +334,12 @@ async function settingsView(main) {
     el("label", {}, "Message"), text, el("label", {}, "Link ", el("span", { class: "hint" }, "(optional)")), link,
     el("h3", { style: "margin-top:26px" }, "Video masterclasses"), el("p", { class: "hint" }, "Upload an MP4 or WebM file (max 100 MB; uploads go live immediately), or paste a YouTube link and press Save."),
     Object.keys(vidLabels).map(uploadBox),
+    el("h3", { style: "margin-top:26px" }, "Google Analytics"),
+    el("p", { class: "hint" }, "Optional. Paste your GA4 Measurement ID (starts with G-). Visitors are asked for cookie permission first, and Google Analytics only loads if they accept. The Analytics page here works without it."),
+    ga,
+    el("h3", { style: "margin-top:26px" }, "Social media links"),
+    el("p", { class: "hint" }, "Shown as icons in the website footer. Leave blank for any you don't use."),
+    Object.entries(socialNames).map(([k, n]) => [el("label", {}, n), socials[k]]),
     el("h3", { style: "margin-top:26px" }, "Insider Club: posts from you"),
     el("p", { class: "hint" }, "Tips and news for members. The newest post goes first (Post 1). Leave empty to show the default welcome tips."),
     postRows.map((r, i) => el("div", { style: "border:1px solid var(--line);border-radius:10px;padding:12px;margin-top:10px" }, el("strong", {}, "Post " + (i + 1)), r.title, r.text)),

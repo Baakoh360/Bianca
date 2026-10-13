@@ -135,12 +135,14 @@ const DEFAULT_SETTINGS = {
   videoTitles: { home: "", hair: "", lash: "", nails: "" },
   clubPerks: [],
   clubPosts: [],
+  gaId: "",
+  socials: {},
   qna: { title: "", when: "", link: "" },
   contactEmail: "",
 };
 async function getSettings() {
   const s = db ? await db.collection("settings").findOne({ _id: "site" }) : null;
-  return { ...DEFAULT_SETTINGS, ...(s || {}), announcement: { ...DEFAULT_SETTINGS.announcement, ...(s?.announcement || {}) }, videos: { ...DEFAULT_SETTINGS.videos, ...(s?.videos || {}) }, videoFiles: { ...DEFAULT_SETTINGS.videoFiles, ...(s?.videoFiles || {}) }, videoNames: { ...DEFAULT_SETTINGS.videoNames, ...(s?.videoNames || {}) }, videoTitles: { ...DEFAULT_SETTINGS.videoTitles, ...(s?.videoTitles || {}) }, clubPerks: s?.clubPerks || [], clubPosts: s?.clubPosts || [], qna: { ...DEFAULT_SETTINGS.qna, ...(s?.qna || {}) } };
+  return { ...DEFAULT_SETTINGS, ...(s || {}), announcement: { ...DEFAULT_SETTINGS.announcement, ...(s?.announcement || {}) }, videos: { ...DEFAULT_SETTINGS.videos, ...(s?.videos || {}) }, videoFiles: { ...DEFAULT_SETTINGS.videoFiles, ...(s?.videoFiles || {}) }, videoNames: { ...DEFAULT_SETTINGS.videoNames, ...(s?.videoNames || {}) }, videoTitles: { ...DEFAULT_SETTINGS.videoTitles, ...(s?.videoTitles || {}) }, clubPerks: s?.clubPerks || [], clubPosts: s?.clubPosts || [], gaId: s?.gaId || "", socials: s?.socials || {}, qna: { ...DEFAULT_SETTINGS.qna, ...(s?.qna || {}) } };
 }
 const ytId = (v) => { const m = String(v).match(/(?:v=|youtu\.be\/|embed\/|shorts\/)?([A-Za-z0-9_-]{11})(?:[?&].*)?$/); return m ? m[1] : ""; };
 
@@ -214,7 +216,7 @@ async function receiveVideo(req, res, slot, session) {
 async function publicApi(req, res, path) {
   if (path === "/api/settings" && req.method === "GET") {
     const s = await getSettings();
-    return json(res, 200, { announcement: s.announcement.enabled ? s.announcement : null, videos: s.videos, videoFiles: s.videoFiles, videoTitles: s.videoTitles });
+    return json(res, 200, { announcement: s.announcement.enabled ? s.announcement : null, videos: s.videos, videoFiles: s.videoFiles, videoTitles: s.videoTitles, gaId: s.gaId, socials: s.socials });
   }
   if (req.method !== "POST") return json(res, 405, { error: "method" });
   const ip = clientIp(req);
@@ -235,7 +237,11 @@ async function publicApi(req, res, path) {
     if (limited("t" + ip, 120, 600000) || !db) return json(res, 204, {});
     const p = clean(d.path, 200);
     if (!p.startsWith("/") || p.startsWith("/admin")) return json(res, 204, {});
-    await log("pageview", req, { path: p, ref: clean(d.ref, 200) });
+    const ua = String(req.headers["user-agent"] || "");
+    const u = d.utm && typeof d.utm === "object" ? d.utm : {};
+    const detail = { path: p, ref: clean(d.ref, 200), device: /Mobi|Android|iPhone|iPad/i.test(ua) ? "mobile" : "desktop" };
+    for (const [k, key] of [["s", "utm_source"], ["m", "utm_medium"], ["c", "utm_campaign"]]) { const v = clean(u[k], 60).toLowerCase(); if (v) detail[key] = v; }
+    await log("pageview", req, detail);
     return json(res, 204, {});
   }
 
@@ -248,7 +254,7 @@ async function publicApi(req, res, path) {
   if (path === "/api/subscribe") {
     const r = await db.collection("subscribers").updateOne(
       { email },
-      { $setOnInsert: { email, name: clean(d.name, 80), source: clean(d.source, 200), status: "active", createdAt: new Date() } },
+      { $setOnInsert: { email, name: clean(d.name, 80), source: clean(d.source, 200), campaign: clean(d.campaign, 150), status: "active", createdAt: new Date() } },
       { upsert: true });
     if (r.upsertedCount) await log("subscribe", req, { email, source: clean(d.source, 200) });
     return json(res, 200, { ok: true, duplicate: !r.upsertedCount });
@@ -261,6 +267,39 @@ async function publicApi(req, res, path) {
     return json(res, 200, { ok: true });
   }
   json(res, 404, { error: "not found" });
+}
+
+/* ---------- Analytics (first-party, cookie-free) ---------- */
+async function buildAnalytics(days) {
+  const since = new Date(Date.now() - days * 86400000);
+  const pv = { type: "pageview", createdAt: { $gte: since } };
+  const day = { $dateToString: { format: "%Y-%m-%d", date: "$createdAt" } };
+  const logs = db.collection("logs"), subs = db.collection("subscribers");
+  const [daily, uniq, sources, campaigns, devices, signDaily, signCampaigns, downloads, messages, totalSignups] = await Promise.all([
+    logs.aggregate([{ $match: pv }, { $group: { _id: day, views: { $sum: 1 }, v: { $addToSet: "$ip" } } }, { $project: { views: 1, visitors: { $size: "$v" } } }]).toArray(),
+    logs.aggregate([{ $match: pv }, { $group: { _id: "$ip" } }, { $count: "n" }]).toArray(),
+    logs.aggregate([{ $match: pv }, { $group: { _id: { $ifNull: ["$detail.ref", ""] }, n: { $sum: 1 } } }, { $sort: { n: -1 } }, { $limit: 15 }]).toArray(),
+    logs.aggregate([{ $match: { ...pv, "detail.utm_source": { $exists: true, $ne: "" } } }, { $group: { _id: { s: "$detail.utm_source", m: "$detail.utm_medium", c: "$detail.utm_campaign" }, n: { $sum: 1 } } }, { $sort: { n: -1 } }, { $limit: 20 }]).toArray(),
+    logs.aggregate([{ $match: pv }, { $group: { _id: { $ifNull: ["$detail.device", "unknown"] }, n: { $sum: 1 } } }]).toArray(),
+    subs.aggregate([{ $match: { createdAt: { $gte: since } } }, { $group: { _id: day, n: { $sum: 1 } } }]).toArray(),
+    subs.aggregate([{ $match: { createdAt: { $gte: since } } }, { $group: { _id: { $ifNull: ["$campaign", ""] }, n: { $sum: 1 } } }, { $sort: { n: -1 } }]).toArray(),
+    logs.countDocuments({ type: "download", createdAt: { $gte: since } }),
+    db.collection("messages").countDocuments({ createdAt: { $gte: since } }),
+    subs.countDocuments({ createdAt: { $gte: since } }),
+  ]);
+  const dm = Object.fromEntries(daily.map((d) => [d._id, d])), sm = Object.fromEntries(signDaily.map((d) => [d._id, d.n]));
+  const series = [...Array(days)].map((_, i) => { const d = new Date(Date.now() - (days - 1 - i) * 86400000).toISOString().slice(0, 10); return { day: d, views: dm[d]?.views || 0, visitors: dm[d]?.visitors || 0, signups: sm[d] || 0 }; });
+  const views = series.reduce((a, d) => a + d.views, 0), visitors = uniq[0]?.n || 0;
+  return {
+    days, views, visitors, signups: totalSignups, downloads, messages,
+    conversion: visitors ? +((totalSignups / visitors) * 100).toFixed(1) : 0,
+    viewsPerVisitor: visitors ? +(views / visitors).toFixed(1) : 0,
+    series,
+    sources: sources.map((x) => ({ source: x._id || "Direct / unknown", n: x.n })),
+    campaigns: campaigns.map((x) => ({ source: x._id.s, medium: x._id.m || "", campaign: x._id.c || "", n: x.n })),
+    devices: devices.map((x) => ({ device: x._id, n: x.n })),
+    signupCampaigns: signCampaigns.map((x) => ({ campaign: x._id || "Not from a tracked link", n: x.n })),
+  };
 }
 
 /* ---------- Admin API ---------- */
@@ -292,6 +331,20 @@ async function adminApi(req, res, path, url) {
 
   if (path === "/api/admin/me") return json(res, 200, { email: session.email });
   if (path === "/api/admin/logout") return json(res, 200, { ok: true }, { "Set-Cookie": cookie("", 0) });
+
+  if (path === "/api/admin/analytics" || path === "/api/admin/analytics/export") {
+    const days = [7, 30, 90].includes(+url.searchParams.get("days")) ? +url.searchParams.get("days") : 30;
+    const a = await buildAnalytics(days);
+    if (path.endsWith("/export")) {
+      const csv = "date,page_views,unique_visitors,signups\n" + a.series.map((d) => [d.day, d.views, d.visitors, d.signups].join(",")).join("\n")
+        + `\n\nsummary_last_${days}_days,page_views,unique_visitors,signups,conversion_percent\n,${a.views},${a.visitors},${a.signups},${a.conversion}\n`
+        + "\ntraffic_source,page_views\n" + a.sources.map((x) => [csvCell(x.source), x.n].join(",")).join("\n")
+        + "\n\ncampaign_source,medium,campaign,page_views\n" + a.campaigns.map((x) => [x.source, x.medium, x.campaign, x.n].map(csvCell).join(",")).join("\n") + "\n";
+      res.writeHead(200, { "Content-Type": "text/csv; charset=utf-8", "Content-Disposition": `attachment; filename="analytics-${days}-days.csv"`, "Cache-Control": "no-store" });
+      return res.end("﻿" + csv);
+    }
+    return json(res, 200, a);
+  }
 
   if (path === "/api/admin/stats") {
     const since = new Date(Date.now() - 14 * 86400000);
@@ -378,7 +431,15 @@ async function adminApi(req, res, path, url) {
       const clubPerks = (Array.isArray(d.clubPerks) ? d.clubPerks : []).slice(0, 8).map((p) => ({ title: clean(p?.title, 80), text: clean(p?.text, 300), code: clean(p?.code, 40), link: safeLink(p?.link) })).filter((p) => p.title);
       const clubPosts = (Array.isArray(d.clubPosts) ? d.clubPosts : []).slice(0, 6).map((p) => ({ title: clean(p?.title, 100), text: String(p?.text ?? "").replace(/[\u0000-\u0008\u000b-\u001f]/g, "").trim().slice(0, 1200) })).filter((p) => p.title && p.text);
       const qna = { title: clean(d.qna?.title, 100), when: clean(d.qna?.when, 100), link: safeLink(d.qna?.link) };
-      const next = { clubPerks, clubPosts, qna, announcement: { enabled: !!d.announcement?.enabled, text: clean(d.announcement?.text, 200), link }, videos, videoTitles, contactEmail: clean(d.contactEmail, 254) };
+      const gaId = clean(d.gaId, 20).toUpperCase();
+      if (gaId && !/^G-[A-Z0-9]{6,12}$/.test(gaId)) return json(res, 400, { error: "The Google Analytics ID should look like G-ABC123XYZ4." });
+      const socials = {};
+      for (const k of ["instagram", "tiktok", "youtube", "facebook", "x", "pinterest", "linkedin"]) {
+        const u = clean(d.socials?.[k], 200);
+        if (u && !/^https:\/\//i.test(u)) return json(res, 400, { error: `The ${k} link must start with https://` });
+        if (u) socials[k] = u;
+      }
+      const next = { gaId, socials, clubPerks, clubPosts, qna, announcement: { enabled: !!d.announcement?.enabled, text: clean(d.announcement?.text, 200), link }, videos, videoTitles, contactEmail: clean(d.contactEmail, 254) };
       await db.collection("settings").updateOne({ _id: "site" }, { $set: next }, { upsert: true });
       await log("settings_updated", req, { by: session.email });
       return json(res, 200, { ok: true, settings: next });
@@ -456,6 +517,12 @@ async function adminApi(req, res, path, url) {
 }
 
 /* ---------- Static files ---------- */
+function siteOrigin(req) {
+  if (process.env.PUBLIC_URL && !/localhost/.test(process.env.PUBLIC_URL)) return process.env.PUBLIC_URL.replace(/\/$/, "");
+  const proto = (TRUST_PROXY && req.headers["x-forwarded-proto"]) || "http";
+  const host = (TRUST_PROXY && req.headers["x-forwarded-host"]) || req.headers.host || "localhost";
+  return `${String(proto).split(",")[0]}://${String(host).split(",")[0]}`;
+}
 async function serveStatic(req, res, path) {
   if (path === "/admin") { res.writeHead(301, { Location: "/admin/" }); return res.end(); }
   if (HIDDEN.test(path)) throw Object.assign(new Error(), { code: "ENOENT" });
@@ -475,8 +542,10 @@ async function serveStatic(req, res, path) {
     headers["Content-Disposition"] = `attachment; filename="${path.split("/").pop()}"`;
     if (req.method === "GET") log("download", req, { file: path });
   }
+  let out = data;
+  if ([".html", ".xml", ".txt"].includes(ext)) out = Buffer.from(data.toString("utf8").replaceAll("https://www.example.com", siteOrigin(req)));
   res.writeHead(200, headers);
-  res.end(req.method === "HEAD" ? undefined : data);
+  res.end(req.method === "HEAD" ? undefined : out);
 }
 
 http.createServer(async (req, res) => {

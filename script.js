@@ -43,8 +43,9 @@ async function subscribe(form) {
 
   let saved = true;
   if (API_OK) {
-    try { await post(SUBSCRIBE_ENDPOINT, { email, name, source: location.pathname, website: form.querySelector("input[name=website]")?.value }); } catch { saved = false; }
+    try { await post(SUBSCRIBE_ENDPOINT, { email, name, source: location.pathname, campaign: (() => { try { const u = JSON.parse(store.get('tbj-utm') || 'null'); return u ? [u.s, u.m, u.c].filter(Boolean).join(' / ') : ''; } catch { return ''; } })(), website: form.querySelector("input[name=website]")?.value }); } catch { saved = false; }
   }
+  if (saved && window.gtag) window.gtag('event', 'sign_up', { method: 'insider_club' });
   store.set('tbj-subscribed', '1'); store.set('tbj-email', email); store.set('tbj-name', name);
 
   if (msg) {
@@ -165,7 +166,7 @@ document.querySelectorAll('form[data-subscribe], form[data-contact]').forEach((f
 // Page-view tracking + settings from the admin panel
 if (API_OK) {
   try {
-    navigator.sendBeacon('/api/track', new Blob([JSON.stringify({ path: location.pathname, ref: document.referrer ? new URL(document.referrer).hostname : '' })], { type: 'application/json' }));
+    navigator.sendBeacon('/api/track', new Blob([JSON.stringify({ path: location.pathname, ref: document.referrer && new URL(document.referrer).hostname !== location.hostname ? new URL(document.referrer).hostname : '', utm: (() => { const q = new URLSearchParams(location.search); return q.get('utm_source') ? { s: q.get('utm_source'), m: q.get('utm_medium') || '', c: q.get('utm_campaign') || '' } : undefined; })() })], { type: 'application/json' }));
     fetch('/api/settings').then((r) => r.json()).then((cfg) => {
       document.querySelectorAll('.video button.play[data-vkey]').forEach((b) => {
         const k = b.dataset.vkey, file = cfg.videoFiles?.[k], yt = cfg.videos?.[k], title = (cfg.videoTitles?.[k] || '').trim();
@@ -185,6 +186,8 @@ if (API_OK) {
           b.style.backgroundImage = 'url(https://i.ytimg.com/vi/' + yt + '/hqdefault.jpg)';
         }
       });
+      if (cfg.gaId) consentBanner(cfg.gaId);
+      footerSocials(cfg.socials);
       const a = cfg.announcement;
       if (a && a.text) {
         const bar = document.createElement('div');
@@ -283,4 +286,53 @@ if (API_OK) {
     const d = email ? await lookup(email) : null;
     if (d && d.member) show(d); else guest();
   })();
+})();
+
+/* ================= marketing: campaign tracking, analytics consent, share + social ================= */
+function loadGA(id) {
+  if (window.__gaLoaded || !/^G-[A-Z0-9]+$/.test(id)) return;
+  window.__gaLoaded = true;
+  const s = document.createElement('script'); s.async = true; s.src = 'https://www.googletagmanager.com/gtag/js?id=' + id; document.head.append(s);
+  window.dataLayer = window.dataLayer || [];
+  window.gtag = function () { window.dataLayer.push(arguments); };
+  window.gtag('js', new Date()); window.gtag('config', id, { anonymize_ip: true });
+}
+
+function consentBanner(id) {
+  const choice = store.get('tbj-consent');
+  if (choice === 'granted') return loadGA(id);
+  if (choice === 'denied') return;
+  const b = document.createElement('div'); b.className = 'consent'; b.setAttribute('role', 'dialog'); b.setAttribute('aria-label', 'Cookie choices');
+  const p = document.createElement('p'); p.append('We would like to use Google Analytics cookies to understand how people use this site. ');
+  const more = document.createElement('a'); more.href = SITE_BASE + 'privacy.html'; more.textContent = 'Privacy policy'; p.append(more);
+  const yes = document.createElement('button'); yes.className = 'btn small'; yes.textContent = 'Accept';
+  const no = document.createElement('button'); no.className = 'btn small ghost'; no.textContent = 'Decline';
+  yes.onclick = () => { store.set('tbj-consent', 'granted'); b.remove(); loadGA(id); };
+  no.onclick = () => { store.set('tbj-consent', 'denied'); b.remove(); };
+  const row = document.createElement('div'); row.className = 'consent-btns'; row.append(yes, no);
+  b.append(p, row); document.body.append(b);
+}
+
+function footerSocials(socials) {
+  const box = document.getElementById('footer-socials'); if (!box || !socials) return;
+  const names = { instagram: 'Instagram', tiktok: 'TikTok', youtube: 'YouTube', facebook: 'Facebook', x: 'X', pinterest: 'Pinterest', linkedin: 'LinkedIn' };
+  for (const [k, label] of Object.entries(names)) {
+    if (!socials[k] || !/^https:\/\//i.test(socials[k])) continue;
+    const a = document.createElement('a'); a.href = socials[k]; a.target = '_blank'; a.rel = 'noopener'; a.textContent = label; box.append(a);
+  }
+}
+
+(() => {
+  // remember the campaign a visitor arrived from (utm links), so a later sign-up is credited to it
+  const q = new URLSearchParams(location.search);
+  if (q.get('utm_source')) store.set('tbj-utm', JSON.stringify({ s: q.get('utm_source'), m: q.get('utm_medium') || '', c: q.get('utm_campaign') || '' }));
+
+  // share buttons on guides: links carry their own tracking tags
+  const url = location.origin + location.pathname, title = document.title.split('|')[0].trim();
+  const nets = { whatsapp: (u) => 'https://wa.me/?text=' + encodeURIComponent(title + ' ' + u), x: (u) => 'https://twitter.com/intent/tweet?text=' + encodeURIComponent(title) + '&url=' + encodeURIComponent(u), facebook: (u) => 'https://www.facebook.com/sharer/sharer.php?u=' + encodeURIComponent(u), pinterest: (u) => 'https://pinterest.com/pin/create/button/?url=' + encodeURIComponent(u) + '&description=' + encodeURIComponent(title) };
+  document.querySelectorAll('[data-share]').forEach((a) => {
+    const n = a.dataset.share;
+    if (nets[n]) { a.href = nets[n](url + '?utm_source=' + n + '&utm_medium=social&utm_campaign=share'); a.target = '_blank'; a.rel = 'noopener'; }
+    else if (n === 'copy') a.addEventListener('click', async (e) => { e.preventDefault(); try { await navigator.clipboard.writeText(url + '?utm_source=copy&utm_medium=share&utm_campaign=share'); a.textContent = 'Link copied'; } catch { prompt('Copy this link:', url); } });
+  });
 })();
