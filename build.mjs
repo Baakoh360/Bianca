@@ -12,7 +12,7 @@ const BUILD_ID = Date.now().toString(36); // appended to css/js links so browser
 const SITE = {
   name: "The Beauty Journal",
   url: "https://beautyjournals.com", // your live domain (used for canonical URLs, social cards and the sitemap)
-  email: "hello@example.com",     // ← your real contact email
+  email: "oforioforiwaa887@gmail.com", // public contact email (Contact page, privacy policy)
   updated: "2026-10-05",
   updatedLabel: "5 October 2026",
 };
