@@ -2,6 +2,7 @@
 // Run:  node server.js      (reads settings from .env)
 import http from "node:http";
 import { readFile, stat } from "node:fs/promises";
+import { existsSync } from "node:fs";
 import { extname, join, normalize, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import crypto from "node:crypto";
@@ -538,6 +539,15 @@ function siteOrigin(req) {
 }
 async function serveStatic(req, res, path) {
   if (path === "/admin") { res.writeHead(301, { Location: "/admin/" }); return res.end(); }
+  // Friendly addresses: /hair, /hair/, /about-us ... go to the real page instead of a 404
+  if (path !== "/" && !path.startsWith("/admin/")) {
+    const ALIASES = { "/home": "/", "/index": "/", "/about-us": "/about.html", "/contact-us": "/contact.html", "/insider-club": "/club.html", "/privacy-policy": "/privacy.html", "/guides": "/#hubs", "/blog": "/#hubs", "/articles": "/#hubs" };
+    const bare = path.replace(/\/+$/, "");
+    const target = ALIASES[bare] || (!extname(bare) && !HIDDEN.test(bare + ".html") && existsSync(join(ROOT, bare + ".html")) ? bare + ".html" : null);
+    if (target) { res.writeHead(301, { Location: target }); return res.end(); }
+    // WordPress-style leftovers from the domain's previous website (/some-old-post/) are gone for good: tell Google with a 410
+    if (path.endsWith("/") && !extname(bare) && !existsSync(join(ROOT, path, "index.html"))) throw Object.assign(new Error("gone"), { code: "GONE" });
+  }
   if (HIDDEN.test(path)) throw Object.assign(new Error(), { code: "ENOENT" });
   if (path.endsWith("/")) path += "index.html";
   const file = normalize(join(ROOT, path));
@@ -582,10 +592,10 @@ http.createServer(async (req, res) => {
     }
     await serveStatic(req, res, path);
   } catch (e) {
-    if (e.code !== "ENOENT" && e.code !== "EISDIR") { console.error(e); if (req.url.startsWith("/api/")) return json(res, 500, { error: "server error" }); }
+    if (e.code !== "ENOENT" && e.code !== "EISDIR" && e.code !== "GONE") { console.error(e); if (req.url.startsWith("/api/")) return json(res, 500, { error: "server error" }); }
     try {
       const page = await readFile(join(ROOT, "404.html"));
-      res.writeHead(404, { "Content-Type": "text/html; charset=utf-8" });
+      res.writeHead(e.code === "GONE" ? 410 : 404, { "Content-Type": "text/html; charset=utf-8", "X-Robots-Tag": "noindex" });
       res.end(page);
     } catch { res.writeHead(404); res.end("Not found"); }
   }

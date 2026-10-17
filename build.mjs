@@ -642,8 +642,9 @@ function privacyPage() {
 
 function notFoundPage() {
   const body = `${plainHero("404", "Page not <em>found.</em>", "That page has moved or never existed.")}
-<section class="section"><div class="wrap"><a class="btn" href="index.html">Back to home</a> <a class="btn ghost" href="hair.html">Browse the hubs</a></div></section>`;
-  return layout({ title: "Page not found", desc: "Page not found.", path: "404.html", body, noindex: true });
+<section class="section"><div class="wrap"><a class="btn" href="/index.html">Back to home</a> <a class="btn ghost" href="/hair.html">Browse the hubs</a>
+<h2 style="margin-top:2em">Popular guides</h2><ul class="checks">${GUIDES.slice(0, 8).map((g) => `<li><a href="/guides/${g.slug}.html">${g.title}</a></li>`).join("")}</ul></div></section>`;
+  return layout({ title: "Page not found", desc: "Page not found.", path: "404.html", root: "/", body, noindex: true });
 }
 
 
