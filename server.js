@@ -22,6 +22,8 @@ const TRUST_PROXY = process.env.TRUST_PROXY === "1" || !!process.env.RENDER; // 
 const IS_PROD = process.env.NODE_ENV === "production";
 if (!SESSION_SECRET || SESSION_SECRET.length < 32) { console.error("Set SESSION_SECRET (32+ chars) in .env"); process.exit(1); }
 
+process.on("unhandledRejection", (e) => console.error("unhandledRejection:", e));
+process.on("uncaughtException", (e) => console.error("uncaughtException:", e));
 const HIDDEN = /^\/(node_modules|tools|data)(\/|$)|^\/(server\.js|build\.mjs|package(-lock)?\.json|README\.md)$|^\/\.|\.env/i;
 const TYPES = {
   ".mp4": "video/mp4", ".webm": "video/webm",
@@ -36,7 +38,7 @@ async function connect() {
   if (!MONGODB_URI) { console.error("MONGODB_URI missing: forms and admin disabled."); return; }
   for (;;) {
     try {
-      const client = new MongoClient(MONGODB_URI, { serverSelectionTimeoutMS: 10000 });
+      const client = new MongoClient(MONGODB_URI, { serverSelectionTimeoutMS: 10000, socketTimeoutMS: 30000, maxIdleTimeMS: 60000, maxPoolSize: 10 });
       await client.connect();
       db = client.db();
       await Promise.all([
@@ -142,8 +144,18 @@ const DEFAULT_SETTINGS = {
   qna: { title: "", when: "", link: "" },
   contactEmail: "",
 };
-async function getSettings() {
-  const s = db ? await db.collection("settings").findOne({ _id: "site" }) : null;
+const settingsCache = { t: 0, v: null };
+async function getSettings(fresh = false) {
+  if (!fresh && settingsCache.v && Date.now() - settingsCache.t < 20000) return settingsCache.v;
+  let s = null;
+  try {
+    s = db ? await Promise.race([db.collection("settings").findOne({ _id: "site" }), new Promise((_, rej) => setTimeout(() => rej(new Error("settings timeout")), 4000))]) : null;
+  } catch (e) { if (settingsCache.v) return settingsCache.v; }
+  const v = await buildSettings(s);
+  settingsCache.t = Date.now(); settingsCache.v = v;
+  return v;
+}
+async function buildSettings(s) {
   return { ...DEFAULT_SETTINGS, ...(s || {}), announcement: { ...DEFAULT_SETTINGS.announcement, ...(s?.announcement || {}) }, videos: { ...DEFAULT_SETTINGS.videos, ...(s?.videos || {}) }, videoFiles: { ...DEFAULT_SETTINGS.videoFiles, ...(s?.videoFiles || {}) }, videoNames: { ...DEFAULT_SETTINGS.videoNames, ...(s?.videoNames || {}) }, videoTitles: { ...DEFAULT_SETTINGS.videoTitles, ...(s?.videoTitles || {}) }, clubPerks: s?.clubPerks || [], clubPosts: s?.clubPosts || [], gaId: s?.gaId || "", gscToken: s?.gscToken || "", socials: s?.socials || {}, qna: { ...DEFAULT_SETTINGS.qna, ...(s?.qna || {}) } };
 }
 const ytId = (v) => { const m = String(v).match(/(?:v=|youtu\.be\/|embed\/|shorts\/)?([A-Za-z0-9_-]{11})(?:[?&].*)?$/); return m ? m[1] : ""; };
@@ -207,8 +219,9 @@ async function receiveVideo(req, res, slot, session) {
   });
   try { await pipeline(req, guard, up); }
   catch (e) { await up.abort().catch(() => {}); return json(res, 400, { error: e.message || "Upload failed." }); }
-  const prev = (await getSettings()).videoFiles[slot];
+  const prev = (await getSettings(true)).videoFiles[slot];
   await db.collection("settings").updateOne({ _id: "site" }, { $set: { [`videoFiles.${slot}`]: up.id.toString(), [`videoNames.${slot}`]: name } }, { upsert: true });
+  settingsCache.t = 0;
   if (prev && oid(prev)) await bucket().delete(oid(prev)).catch(() => {});
   await log("video_uploaded", req, { slot, name, by: session.email });
   json(res, 200, { ok: true, id: up.id.toString(), name });
@@ -446,7 +459,7 @@ async function adminApi(req, res, path, url) {
       }
       const next = { gaId, gscToken, socials, clubPerks, clubPosts, qna, announcement: { enabled: !!d.announcement?.enabled, text: clean(d.announcement?.text, 200), link }, videos, videoTitles, contactEmail: clean(d.contactEmail, 254) };
       await db.collection("settings").updateOne({ _id: "site" }, { $set: next }, { upsert: true });
-      headCache.t = 0;
+      headCache.t = 0; settingsCache.t = 0;
       await log("settings_updated", req, { by: session.email });
       return json(res, 200, { ok: true, settings: next });
     }
@@ -455,8 +468,9 @@ async function adminApi(req, res, path, url) {
   const vm = path.match(/^\/api\/admin\/video\/(home|hair|lash|nails)$/);
   if (vm && req.method === "POST") return receiveVideo(req, res, vm[1], session);
   if (vm && req.method === "DELETE") {
-    const prev = (await getSettings()).videoFiles[vm[1]];
+    const prev = (await getSettings(true)).videoFiles[vm[1]];
     await db.collection("settings").updateOne({ _id: "site" }, { $set: { [`videoFiles.${vm[1]}`]: "", [`videoNames.${vm[1]}`]: "" } }, { upsert: true });
+    settingsCache.t = 0;
     if (prev && oid(prev)) await bucket().delete(oid(prev)).catch(() => {});
     await log("video_removed", req, { slot: vm[1], by: session.email });
     return json(res, 200, { ok: true });
@@ -537,13 +551,24 @@ function siteOrigin(req) {
   const host = (TRUST_PROXY && req.headers["x-forwarded-host"]) || req.headers.host || "localhost";
   return `${String(proto).split(",")[0]}://${String(host).split(",")[0]}`;
 }
+const ALIASES = { "/home": "/", "/index": "/", "/index.htm": "/", "/index.php": "/", "/default.html": "/", "/about-us": "/about.html", "/contact-us": "/contact.html", "/insider-club": "/club.html", "/privacy-policy": "/privacy.html", "/guides": "/#hubs", "/blog": "/#hubs", "/articles": "/#hubs" };
 async function serveStatic(req, res, path) {
   if (path === "/admin") { res.writeHead(301, { Location: "/admin/" }); return res.end(); }
+  // Browsers and crawlers ask for /favicon.ico automatically
+  if (path === "/favicon.ico") path = "/favicon.svg";
+  // Tidy up common typos: double slashes, capital letters, a slash after .html
+  if (path !== "/" && !path.startsWith("/admin/")) {
+    const flat = path.replace(/\/{2,}/g, "/");
+    if (flat !== path) { res.writeHead(301, { Location: flat }); return res.end(); }
+    const low = path.toLowerCase();
+    if (low !== path && !existsSync(join(ROOT, path)) && (ALIASES[low.replace(/\/+$/, "")] || existsSync(join(ROOT, low)) || existsSync(join(ROOT, low.replace(/\/+$/, "") + ".html")))) { res.writeHead(301, { Location: low }); return res.end(); }
+    const noSlash = path.replace(/\/+$/, "");
+    if (path.endsWith("/") && extname(noSlash) && !HIDDEN.test(noSlash) && existsSync(join(ROOT, noSlash))) { res.writeHead(301, { Location: noSlash }); return res.end(); }
+  }
   // Friendly addresses: /hair, /hair/, /about-us ... go to the real page instead of a 404
   if (path !== "/" && !path.startsWith("/admin/")) {
-    const ALIASES = { "/home": "/", "/index": "/", "/about-us": "/about.html", "/contact-us": "/contact.html", "/insider-club": "/club.html", "/privacy-policy": "/privacy.html", "/guides": "/#hubs", "/blog": "/#hubs", "/articles": "/#hubs" };
     const bare = path.replace(/\/+$/, "");
-    const target = ALIASES[bare] || (!extname(bare) && !HIDDEN.test(bare + ".html") && existsSync(join(ROOT, bare + ".html")) ? bare + ".html" : null);
+    const target = ALIASES[bare.toLowerCase()] || (!extname(bare) && !HIDDEN.test(bare + ".html") && existsSync(join(ROOT, bare + ".html")) ? bare + ".html" : null);
     if (target) { res.writeHead(301, { Location: target }); return res.end(); }
     // WordPress-style leftovers from the domain's previous website (/some-old-post/) are gone for good: tell Google with a 410
     if (path.endsWith("/") && !extname(bare) && !existsSync(join(ROOT, path, "index.html"))) throw Object.assign(new Error("gone"), { code: "GONE" });
@@ -571,6 +596,7 @@ async function serveStatic(req, res, path) {
     if (ext === ".html" && !path.startsWith("/admin/")) { const tag = await headTags(); if (tag) text = text.replace("</head>", () => tag + "</head>"); }
     out = Buffer.from(text);
   }
+  headers["Content-Length"] = out.length;
   res.writeHead(200, headers);
   res.end(req.method === "HEAD" ? undefined : out);
 }
@@ -579,6 +605,7 @@ http.createServer(async (req, res) => {
   try {
     const url = new URL(req.url, "http://x");
     const path = decodeURIComponent(url.pathname);
+    if (path === "/healthz") { res.writeHead(200, { "Content-Type": "text/plain", "Cache-Control": "no-store" }); return res.end("ok"); }
     if (path.startsWith("/api/admin/")) return await adminApi(req, res, path, url);
     if (path.startsWith("/api/")) return await publicApi(req, res, path);
     const mm = path.match(/^\/media\/([a-f0-9]{24})$/);
@@ -592,13 +619,18 @@ http.createServer(async (req, res) => {
     }
     await serveStatic(req, res, path);
   } catch (e) {
-    if (e.code !== "ENOENT" && e.code !== "EISDIR" && e.code !== "GONE") { console.error(e); if (req.url.startsWith("/api/")) return json(res, 500, { error: "server error" }); }
+    if (!["ENOENT", "EISDIR", "ENOTDIR", "ENAMETOOLONG", "GONE"].includes(e.code)) {
+      console.error("request error:", req.method, req.url, e.code || "", e.message);
+      if (req.url.startsWith("/api/")) return json(res, 500, { error: "server error" });
+      if (!res.headersSent) res.writeHead(500, { "Content-Type": "text/plain; charset=utf-8", "Cache-Control": "no-store", "Retry-After": "5" });
+      return res.end("Something went wrong. Please refresh in a moment.");
+    }
     try {
       const page = await readFile(join(ROOT, "404.html"));
       res.writeHead(e.code === "GONE" ? 410 : 404, { "Content-Type": "text/html; charset=utf-8", "X-Robots-Tag": "noindex" });
       res.end(page);
     } catch { res.writeHead(404); res.end("Not found"); }
   }
-}).on("listening", function () { this.requestTimeout = 15 * 60 * 1000; }).listen(PORT, () => console.log(`The Beauty Journal running at http://localhost:${PORT}  (admin: /admin/)`));
+}).on("listening", function () { this.requestTimeout = 15 * 60 * 1000; this.keepAliveTimeout = 120000; this.headersTimeout = 125000; }).listen(PORT, () => console.log(`The Beauty Journal running at http://localhost:${PORT}  (admin: /admin/)`));
 
 connect();
