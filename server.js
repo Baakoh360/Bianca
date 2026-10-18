@@ -577,11 +577,11 @@ async function serveStatic(req, res, path) {
   if (path.endsWith("/")) path += "index.html";
   const file = normalize(join(ROOT, path));
   if (!file.startsWith(ROOT)) throw Object.assign(new Error(), { code: "ENOENT" });
+  const ext = extname(file);
   const st = await stat(file);
   const etag = `W/"${st.size.toString(16)}-${Math.floor(st.mtimeMs).toString(16)}"`;
   if (req.headers["if-none-match"] === etag && !path.startsWith("/admin/") && ext !== ".html") { res.writeHead(304, { ETag: etag, "Cache-Control": "no-cache" }); return res.end(); }
   const data = await readFile(file);
-  const ext = extname(file);
   const headers = { "Content-Type": TYPES[ext] || "application/octet-stream", "X-Content-Type-Options": "nosniff", "Referrer-Policy": "strict-origin-when-cross-origin" };
   if (path.startsWith("/admin/")) { headers["X-Frame-Options"] = "DENY"; headers["Cache-Control"] = "no-store"; headers["X-Robots-Tag"] = "noindex"; }
   else if ([".html", ".css", ".js", ".xml", ".txt"].includes(ext)) { headers["Cache-Control"] = "no-cache"; headers.ETag = etag; } // always revalidate, so updates show immediately
