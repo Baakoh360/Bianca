@@ -389,6 +389,23 @@ img.art { object-fit: cover; background: var(--blush); }
 .site-footer .footer-socials .social-pill { display: inline-flex; margin: 0; }
 
 /* the cookie banner and the sign-up bar must not overlap: hide the bar while the banner is showing */
-body:has(.consent) .sticky-bar { transform: translateY(110
 /* the cookie banner and the sign-up bar must not overlap: hide the bar while the banner is showing */
 body:has(.consent) .sticky-bar { transform: translateY(110%) !important; }
+
+/* ---- three follow cards ---- */
+.follow-cards { grid-template-columns: repeat(3, 1fr); max-width: 1100px; gap: 20px; }
+.follow-card.youtube { background: linear-gradient(135deg, #b3202f 0%, #c9667a 70%, #f08a8f 100%); }
+.follow-card.youtube::after { content: ""; position: absolute; right: -50px; bottom: -50px; width: 170px; height: 170px; border-radius: 50%; background: radial-gradient(circle, rgba(255,255,255,.22), transparent 70%); }
+.fc-text .handle { overflow-wrap: anywhere; }
+@media (max-width: 900px) { .follow-cards { grid-template-columns: 1fr; max-width: 520px; } }
+
+/* ---- footer text scrolls like a TV news ticker ---- */
+@keyframes copyscroll { from { transform: translateX(0); } to { transform: translateX(-50%); } }
+.ticker-copy { overflow: hidden; white-space: nowrap; }
+.copy-track { display: flex; width: max-content; animation: copyscroll 45s linear infinite; will-change: transform; }
+.copy-track > span { padding-right: 4.5rem; flex: none; }
+.ticker-copy:hover .copy-track { animation-play-state: paused; }
+@media (prefers-reduced-motion: reduce) {
+  .copy-track { animation: none !important; width: auto; white-space: normal; }
+  .copy-track > span:not(:first-child) { display: none; }
+}

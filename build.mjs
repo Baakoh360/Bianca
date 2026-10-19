@@ -38,6 +38,7 @@ function art(name, eager = false) {
 const SOCIALS = [
   { key: "instagram", name: "Instagram", url: "https://www.instagram.com/the_beautyjournal_s/", handle: "@the_beautyjournal_s", blurb: "Daily hair, lash and nail tips, behind-the-scenes and real results." },
   { key: "tiktok", name: "TikTok", url: "https://www.tiktok.com/@the_beautyjournal_s", handle: "@the_beautyjournal_s", blurb: "Short how-tos and quick care routines you can copy at home." },
+  { key: "youtube", name: "YouTube", url: "https://www.youtube.com/@The_beautyjournal_S", handle: "@The_beautyjournal_S", blurb: "Video masterclasses and step-by-step teardowns, start to finish." },
 ];
 const socialPills = () => SOCIALS.map((s) => `<a class="social-pill" data-net="${s.key}" href="${s.url}" target="_blank" rel="noopener me" aria-label="${s.name}">${s.name}</a>`).join("");
 function followSection() {
@@ -48,10 +49,17 @@ function followSection() {
     </a>`).join("");
   return `<section class="section follow">
   <div class="wrap">
-    <div class="section-head center"><p class="eyebrow">Follow along</p><h2>Join us on Instagram and TikTok.</h2><p class="lede">New tips, tutorials and real results, shared first on our socials.</p></div>
+    <div class="section-head center"><p class="eyebrow">Follow along</p><h2>Follow us on Instagram, TikTok and YouTube.</h2><p class="lede">New tips, tutorials and real results, shared first on our socials.</p></div>
     <div class="follow-cards">${cards}</div>
   </div>
 </section>`;
+}
+
+/* ---------- Footer news-ticker (scrolls right to left, loops forever) ---------- */
+function copyTicker() {
+  const text = `© <span class="year">2026</span> ${SITE.name}. Website by Ofori Digital Media. Content is educational and not medical advice.`;
+  const copies = [...Array(8)].map((_, i) => `<span${i ? ' aria-hidden="true"' : ""}>${text}</span>`).join("");
+  return `<div class="copy ticker-copy"><div class="copy-track">${copies}</div></div>`;
 }
 
 /* ---------- Layout ---------- */
@@ -112,7 +120,7 @@ ${body.replaceAll("@ROOT@", root)}
       <div><h4>Explore</h4><a href="${root}hair.html">Hair Extensions</a><a href="${root}lash.html">Lash Care</a><a href="${root}nails.html">Nail Maintenance</a><a href="${root}guides/what-beauty-upkeep-really-costs.html">Cost Breakdown</a></div>
       <div><h4>The Journal</h4><a href="${root}about.html">About</a><a href="${root}contact.html">Contact</a><a href="${root}club.html">Insider Club</a><a href="${root}privacy.html">Privacy</a></div>
     </div>
-    <p class="copy">© <span class="year">2026</span> ${SITE.name}. Website by Ofori Digital Media. Content is educational and not medical advice.</p>
+    ${copyTicker()}
   </div>
 </footer>
 ${optinExtras()}
@@ -757,7 +765,7 @@ function clubPage() {
       </form>
       <div class="box next-box">
         <h3>What happens next</h3>
-        <ul class="checks"><li>New guides and masterclasses are added to the site regularly. Browse the <a href="hair.html">hair</a>, <a href="lash.html">lash</a> and <a href="nails.html">nails</a> hubs.</li><li>We'll tell you by email when a new perk or live Q&amp;A is announced.</li><li>Want a topic covered? <a href="contact.html">Tell us</a> and we may turn it into a guide.</li><li>Follow us on <a href="${SOCIALS[0].url}" target="_blank" rel="noopener me">Instagram</a> and <a href="${SOCIALS[1].url}" target="_blank" rel="noopener me">TikTok</a> for daily tips and new guides.</li></ul>
+        <ul class="checks"><li>New guides and masterclasses are added to the site regularly. Browse the <a href="hair.html">hair</a>, <a href="lash.html">lash</a> and <a href="nails.html">nails</a> hubs.</li><li>We'll tell you by email when a new perk or live Q&amp;A is announced.</li><li>Want a topic covered? <a href="contact.html">Tell us</a> and we may turn it into a guide.</li><li>Follow us on <a href="${SOCIALS[0].url}" target="_blank" rel="noopener me">Instagram</a>, <a href="${SOCIALS[1].url}" target="_blank" rel="noopener me">TikTok</a> and <a href="${SOCIALS[2].url}" target="_blank" rel="noopener me">YouTube</a> for daily tips, videos and new guides.</li></ul>
         <p class="fine"><a href="#" id="club-leave">Not you? Use a different email on this device</a></p>
       </div>
     </div>
