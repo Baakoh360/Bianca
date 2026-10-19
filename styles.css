@@ -357,3 +357,38 @@ img.art { object-fit: cover; background: var(--blush); }
 .share-row a:hover { background: var(--plum); color: #fff; }
 .footer-socials { display: flex; flex-wrap: wrap; gap: 8px 16px; margin-top: 12px; }
 .footer-socials a { display: inline-block; margin: 0; font-weight: 600; }
+
+/* ---- social: pills, follow cards ---- */
+.social-pill { display: inline-flex; align-items: center; gap: 8px; text-decoration: none; font-weight: 600; font-size: .9rem; padding: 8px 16px 8px 12px; border-radius: 999px; border: 1.5px solid var(--plum); color: var(--plum); transition: background .2s, color .2s, transform .2s; }
+.social-pill svg { width: 18px; height: 18px; flex: none; }
+.social-pill:hover { background: var(--plum); color: #fff; transform: translateY(-2px); }
+.site-footer .social-pill { border-color: rgba(255,255,255,.35); color: #fff; margin: 0; }
+.site-footer .social-pill:hover { background: var(--rose); border-color: var(--rose); color: #fff; }
+.footer-socials { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 14px; }
+.contact-socials { margin: 4px 0 18px; }
+
+.follow { background: linear-gradient(180deg, var(--bg), var(--blush) 140%); }
+.section-head.center { text-align: center; margin-inline: auto; }
+.section-head.center .lede { margin-inline: auto; }
+.follow-cards { display: grid; grid-template-columns: repeat(2, 1fr); gap: 24px; max-width: 900px; margin: 0 auto; }
+.follow-card { position: relative; display: flex; flex-direction: column; gap: 18px; padding: 30px; border-radius: 22px; color: #fff; text-decoration: none; overflow: hidden; box-shadow: var(--shadow); transition: transform .25s, box-shadow .25s; }
+.follow-card:hover { transform: translateY(-6px); box-shadow: 0 18px 44px rgba(63,27,54,.22); }
+.follow-card.instagram { background: linear-gradient(135deg, #833ab4 0%, #c9667a 50%, #f7a75b 100%); }
+.follow-card.tiktok { background: linear-gradient(135deg, #1c1020 0%, #3f1b36 60%, #5b2a4e 100%); }
+.follow-card.tiktok::after { content: ""; position: absolute; right: -40px; top: -40px; width: 160px; height: 160px; border-radius: 50%; background: radial-gradient(circle, rgba(37,244,238,.35), transparent 70%); }
+.follow-card.instagram::after { content: ""; position: absolute; right: -50px; bottom: -50px; width: 180px; height: 180px; border-radius: 50%; background: radial-gradient(circle, rgba(255,255,255,.25), transparent 70%); }
+.fc-icon { width: 56px; height: 56px; border-radius: 16px; background: rgba(255,255,255,.18); display: grid; place-items: center; backdrop-filter: blur(4px); }
+.fc-icon svg { width: 30px; height: 30px; }
+.fc-text { display: flex; flex-direction: column; gap: 4px; }
+.fc-text strong { font: 600 1.5rem var(--serif); }
+.fc-text .handle { font-weight: 600; opacity: .9; }
+.fc-text .blurb { opacity: .85; font-size: .95rem; margin-top: 6px; }
+.follow-card .more { color: #fff; font-weight: 700; margin-top: auto; }
+.follow-card:hover .more { transform: translateX(6px); }
+@media (max-width: 700px) { .follow-cards { grid-template-columns: 1fr; } .follow-card { padding: 24px; } }
+.site-footer .footer-socials .social-pill { display: inline-flex; margin: 0; }
+
+/* the cookie banner and the sign-up bar must not overlap: hide the bar while the banner is showing */
+body:has(.consent) .sticky-bar { transform: translateY(110
+/* the cookie banner and the sign-up bar must not overlap: hide the bar while the banner is showing */
+body:has(.consent) .sticky-bar { transform: translateY(110%) !important; }

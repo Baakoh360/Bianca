@@ -34,6 +34,26 @@ function art(name, eager = false) {
   return `<img class="art" src="@ROOT@images/${name}.${p.ext || "jpg"}" alt="${p.alt}" width="${p.w}" height="${p.h}" style="object-position:${p.pos}" ${loading}>`;
 }
 
+/* ---------- Social media ---------- */
+const SOCIALS = [
+  { key: "instagram", name: "Instagram", url: "https://www.instagram.com/the_beautyjournal_s/", handle: "@the_beautyjournal_s", blurb: "Daily hair, lash and nail tips, behind-the-scenes and real results." },
+  { key: "tiktok", name: "TikTok", url: "https://www.tiktok.com/@the_beautyjournal_s", handle: "@the_beautyjournal_s", blurb: "Short how-tos and quick care routines you can copy at home." },
+];
+const socialPills = () => SOCIALS.map((s) => `<a class="social-pill" data-net="${s.key}" href="${s.url}" target="_blank" rel="noopener me" aria-label="${s.name}">${s.name}</a>`).join("");
+function followSection() {
+  const cards = SOCIALS.map((s) => `<a class="follow-card ${s.key} reveal" data-net="${s.key}" href="${s.url}" target="_blank" rel="noopener me">
+      <span class="fc-icon" aria-hidden="true"></span>
+      <span class="fc-text"><strong>${s.name}</strong><span class="handle">${s.handle}</span><span class="blurb">${s.blurb}</span></span>
+      <span class="more">Follow us →</span>
+    </a>`).join("");
+  return `<section class="section follow">
+  <div class="wrap">
+    <div class="section-head center"><p class="eyebrow">Follow along</p><h2>Join us on Instagram and TikTok.</h2><p class="lede">New tips, tutorials and real results, shared first on our socials.</p></div>
+    <div class="follow-cards">${cards}</div>
+  </div>
+</section>`;
+}
+
 /* ---------- Layout ---------- */
 const NAV = [
   ["index.html", "Home"],
@@ -88,7 +108,7 @@ ${body.replaceAll("@ROOT@", root)}
 <footer class="site-footer">
   <div class="wrap">
     <div class="footer-grid">
-      <div><h4>The Beauty Journal</h4><p>Honest hair, lash &amp; nail education for women 18–35. No sponsored fluff.</p><div class="footer-socials" id="footer-socials"></div></div>
+      <div><h4>The Beauty Journal</h4><p>Honest hair, lash &amp; nail education for women 18–35. No sponsored fluff.</p><div class="footer-socials" id="footer-socials">${socialPills()}</div></div>
       <div><h4>Explore</h4><a href="${root}hair.html">Hair Extensions</a><a href="${root}lash.html">Lash Care</a><a href="${root}nails.html">Nail Maintenance</a><a href="${root}guides/what-beauty-upkeep-really-costs.html">Cost Breakdown</a></div>
       <div><h4>The Journal</h4><a href="${root}about.html">About</a><a href="${root}contact.html">Contact</a><a href="${root}club.html">Insider Club</a><a href="${root}privacy.html">Privacy</a></div>
     </div>
@@ -559,13 +579,14 @@ function homePage() {
     </div>
   </div>
 </section>
+${followSection()}
 ${clubSection("club")}`;
   return layout({
     title: "The Beauty Journal | Honest Hair, Lash & Nail Education",
     desc: "Unfiltered, evidence-based guides for hair extensions, lash care and gel nails. Real maintenance costs, damage-prevention tips and video masterclasses for women 18–35.",
     path: "index.html", body,
     jsonld: [
-      { "@context": "https://schema.org", "@type": "Organization", name: SITE.name, url: SITE.url },
+      { "@context": "https://schema.org", "@type": "Organization", name: SITE.name, url: SITE.url, sameAs: SOCIALS.map((x) => x.url) },
       { "@context": "https://schema.org", "@type": "WebSite", name: SITE.name, url: SITE.url },
     ],
   });
@@ -611,6 +632,7 @@ function contactPage() {
 <div class="prose"><h2>Other ways</h2>
 <p>Email us at <a href="mailto:${SITE.email}">${SITE.email}</a>.</p>
 <p>Want a topic covered? Tell us what you're struggling with and we may turn it into a guide and video masterclass.</p>
+<p>Follow us for daily tips:</p><div class="footer-socials contact-socials">${socialPills()}</div>
 <p>Brand and partnership enquiries are welcome, but we only feature products we'd recommend, and we always disclose partners.</p></div>
 </div></section>`;
   return layout({ title: "Contact", desc: "Contact The Beauty Journal with questions, topic requests or partnership enquiries.", path: "contact.html", body });
@@ -735,7 +757,7 @@ function clubPage() {
       </form>
       <div class="box next-box">
         <h3>What happens next</h3>
-        <ul class="checks"><li>New guides and masterclasses are added to the site regularly. Browse the <a href="hair.html">hair</a>, <a href="lash.html">lash</a> and <a href="nails.html">nails</a> hubs.</li><li>We'll tell you by email when a new perk or live Q&amp;A is announced.</li><li>Want a topic covered? <a href="contact.html">Tell us</a> and we may turn it into a guide.</li></ul>
+        <ul class="checks"><li>New guides and masterclasses are added to the site regularly. Browse the <a href="hair.html">hair</a>, <a href="lash.html">lash</a> and <a href="nails.html">nails</a> hubs.</li><li>We'll tell you by email when a new perk or live Q&amp;A is announced.</li><li>Want a topic covered? <a href="contact.html">Tell us</a> and we may turn it into a guide.</li><li>Follow us on <a href="${SOCIALS[0].url}" target="_blank" rel="noopener me">Instagram</a> and <a href="${SOCIALS[1].url}" target="_blank" rel="noopener me">TikTok</a> for daily tips and new guides.</li></ul>
         <p class="fine"><a href="#" id="club-leave">Not you? Use a different email on this device</a></p>
       </div>
     </div>

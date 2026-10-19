@@ -314,12 +314,17 @@ function consentBanner(id) {
 }
 
 function footerSocials(socials) {
-  const box = document.getElementById('footer-socials'); if (!box || !socials) return;
+  const box = document.getElementById('footer-socials'); if (!socials) return;
   const names = { instagram: 'Instagram', tiktok: 'TikTok', youtube: 'YouTube', facebook: 'Facebook', x: 'X', pinterest: 'Pinterest', linkedin: 'LinkedIn' };
   for (const [k, label] of Object.entries(names)) {
-    if (!socials[k] || !/^https:\/\//i.test(socials[k])) continue;
-    const a = document.createElement('a'); a.href = socials[k]; a.target = '_blank'; a.rel = 'noopener'; a.textContent = label; box.append(a);
+    const url = socials[k];
+    if (!url || !/^https:\/\//i.test(url)) continue;
+    const existing = document.querySelectorAll('a[data-net="' + k + '"]');
+    if (existing.length) { existing.forEach((a) => { a.href = url; }); continue; } // the admin can change the built-in links
+    if (!box) continue;
+    const a = document.createElement('a'); a.className = 'social-pill'; a.dataset.net = k; a.href = url; a.target = '_blank'; a.rel = 'noopener me'; a.setAttribute('aria-label', label); a.textContent = label; box.append(a);
   }
+  decorateSocials();
 }
 
 (() => {
@@ -336,3 +341,24 @@ function footerSocials(socials) {
     else if (n === 'copy') a.addEventListener('click', async (e) => { e.preventDefault(); try { await navigator.clipboard.writeText(url + '?utm_source=copy&utm_medium=share&utm_campaign=share'); a.textContent = 'Link copied'; } catch { prompt('Copy this link:', url); } });
   });
 })();
+
+/* ================= social icons ================= */
+const SOCIAL_ICONS = {
+  instagram: '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="5" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="12" cy="12" r="4.2" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="17.4" cy="6.6" r="1.3" fill="currentColor"/></svg>',
+  tiktok: '<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M16.6 2h-3.2v13.2a2.9 2.9 0 1 1-2.9-2.9c.3 0 .6 0 .8.1V9.1a6.1 6.1 0 1 0 5.3 6V8.6a7.4 7.4 0 0 0 4.3 1.4V6.8A4.3 4.3 0 0 1 16.6 2z"/></svg>',
+  youtube: '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="2.5" y="5" width="19" height="14" rx="4" fill="none" stroke="currentColor" stroke-width="2"/><path d="M10 9l5 3-5 3z" fill="currentColor"/></svg>',
+  facebook: '<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M14 8V6.5c0-.7.3-1 1-1h2V2h-3c-2.8 0-4 1.7-4 4v2H8v3.5h2V22h4V11.5h2.6L17 8z"/></svg>',
+  x: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 4l14 16M19 4L5 20" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></svg>',
+  pinterest: '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="2"/><path d="M11 17l1.5-7.5a2.5 2.5 0 1 1 1 4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>',
+  linkedin: '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="3" fill="none" stroke="currentColor" stroke-width="2"/><path d="M8 11v5M8 8v.01M12 16v-5m0 2c0-1.5 1-2 2-2s2 .8 2 2v3" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>',
+};
+function decorateSocials() {
+  document.querySelectorAll('a[data-net]').forEach((a) => {
+    if (a.dataset.done) return;
+    const svg = SOCIAL_ICONS[a.dataset.net]; if (!svg) return;
+    a.dataset.done = '1';
+    const holder = a.querySelector('.fc-icon');
+    if (holder) holder.innerHTML = svg; else a.insertAdjacentHTML('afterbegin', svg);
+  });
+}
+decorateSocials();
